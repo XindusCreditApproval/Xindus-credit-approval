@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Xindus Approval Request</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; }
+  h1 { font-size: 22px; }
+  label { display: block; margin-top: 14px; font-weight: bold; font-size: 14px; }
+  input, select, textarea {
+    width: 100%; box-sizing: border-box; padding: 9px; margin-top: 4px;
+    border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
+  }
+  textarea { resize: vertical; }
+  button {
+    margin-top: 22px; padding: 12px 28px; background: #188038; color: #fff;
+    border: none; border-radius: 5px; font-weight: bold; font-size: 15px; cursor: pointer;
+  }
+  button:disabled { background: #999; cursor: not-allowed; }
+  .section { display: none; }
+  .section.active { display: block; }
+  #status { margin-top: 16px; font-size: 14px; }
+  .error { color: #d93025; }
+  .success { color: #188038; }
+</style>
+</head>
+<body>
+
+<h1>Xindus — Approval Request</h1>
+
+<!-- ============================================================
+     EDIT THESE TWO VALUES before publishing:
+     - SUPABASE_URL / SUPABASE_ANON_KEY: from Supabase project settings
+       (Settings → API). The anon key is safe to expose here — it can
+       ONLY insert rows, per the RLS policy in schema.sql.
+     - SEND_EMAIL_FUNCTION_URL: your deployed send-approval-email
+       Edge Function URL.
+     ============================================================ -->
+<script>
+  const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_jOedpjipxRUlzsisHe1yqg_4gWCjqNM";
+  const SEND_EMAIL_FUNCTION_URL = "https://mhvxlgqkfxghpkjfvude.functions.supabase.co/send-approval-email";
+</script>
+
+<form id="approvalForm">
+
+  <label for="approvalType">Approval Type</label>
+  <select id="approvalType" required>
+    <option value="">-- Select --</option>
+    <option value="credit limit extension">Credit Limit Extension</option>
+    <option value="insurer rejection - credit limit exception">Insurer Rejection – Credit Limit Exception</option>
+    <option value="temporary credit - insurer approval under process">Temporary Credit – Insurer Approval Under Process</option>
+  </select>
+
+  <label for="approverEmail">Approver Email</label>
+  <input type="email" id="approverEmail" required placeholder="approver@xindus.net">
+
+  <label for="approverName">Approver Name</label>
+  <input type="text" id="approverName" required>
+
+  <label for="ccEmail">CC Email(s) — optional, comma-separated</label>
+  <input type="text" id="ccEmail" placeholder="person1@xindus.net, person2@xindus.net">
+
+  <!-- Section: Credit Limit Extension -->
+  <div class="section" data-type="credit limit extension">
+    <label>Customer ID / Name</label><input data-field="customer_id_name">
+    <label>Reason for Credit Limit Enhancement</label><textarea rows="2" data-field="reason"></textarea>
+    <label>Current Credit Limit</label><input data-field="current_credit_limit">
+    <label>Current Outstanding</label><input data-field="current_outstanding">
+    <label>Ageing of Overdue</label><input data-field="ageing_overdue" placeholder="e.g. 30 days">
+    <label>Tentative Clearance Date</label><input type="date" data-field="tentative_clearance_date">
+    <label>Overdue Amount, if any</label><input data-field="overdue_amount">
+    <label>Additional Credit Requested</label><input data-field="additional_credit_requested">
+    <label>Sales Owner / KAM</label><input data-field="sales_owner_kam">
+  </div>
+
+  <!-- Section: Insurer Rejection – Credit Limit Exception -->
+  <div class="section" data-type="insurer rejection - credit limit exception">
+    <label>Customer Name</label><input data-field="customer_name">
+    <label>Sales POC Name</label><input data-field="sales_poc_name">
+    <label>Credit Limit Requested</label><input data-field="credit_limit_requested">
+    <label>Credit Requirement</label>
+    <select data-field="credit_requirement"><option value="">--</option><option>Temporary</option><option>Ongoing</option></select>
+    <label>Risk of Losing Customer/Business</label>
+    <select data-field="risk_of_losing_customer"><option value="">--</option><option>Yes</option><option>No</option></select>
+    <label>Customer Willing to Continue on Prepaid Terms</label>
+    <select data-field="customer_willing_prepaid"><option value="">--</option><option>Yes</option><option>No</option></select>
+    <label>Reason for Credit Requirement</label><textarea rows="2" data-field="reason_for_credit_requirement"></textarea>
+    <label>Expected Payment Timeline</label><input data-field="expected_payment_timeline">
+  </div>
+
+  <!-- Section: Temporary Credit – Insurer Approval Under Process -->
+  <div class="section" data-type="temporary credit - insurer approval under process">
+    <label>Customer Name</label><input data-field="customer_name">
+    <label>Sales POC Name</label><input data-field="sales_poc_name">
+    <label>Customer Type</label>
+    <select data-field="customer_type"><option value="">--</option><option>New</option><option>Existing</option></select>
+    <label>Customer Onboarding Date</label><input type="date" data-field="customer_onboarding_date">
+    <label>Credit Limit Required</label><input data-field="credit_limit_required">
+    <label>Reason for Credit Requirement Before Insurer Approval</label>
+    <textarea rows="2" data-field="reason_before_insurer_approval"></textarea>
+    <label>Expected First Payment Date</label><input type="date" data-field="expected_first_payment_date">
+    <label>Credit to be Blocked After Temporary Approval Expiry</label>
+    <select data-field="credit_blocked_after_expiry"><option value="">--</option><option>Yes</option><option>No</option></select>
+  </div>
+
+  <button type="submit" id="submitBtn">Submit Request</button>
+  <div id="status"></div>
+
+</form>
+
+<script>
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const typeSelect = document.getElementById("approvalType");
+  const sections = document.querySelectorAll(".section");
+
+  typeSelect.addEventListener("change", () => {
+    sections.forEach(s => s.classList.toggle("active", s.dataset.type === typeSelect.value));
+  });
+
+  document.getElementById("approvalForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const statusEl = document.getElementById("status");
+    const submitBtn = document.getElementById("submitBtn");
+    statusEl.textContent = "";
+    statusEl.className = "";
+
+    const approvalType = typeSelect.value;
+    if (!approvalType) {
+      statusEl.textContent = "Please select an approval type.";
+      statusEl.className = "error";
+      return;
+    }
+
+    const activeSection = document.querySelector(`.section[data-type="${approvalType}"]`);
+    const requestData = {};
+    activeSection.querySelectorAll("[data-field]").forEach(el => {
+      requestData[el.dataset.field] = el.value.trim();
+    });
+
+    const payload = {
+      approval_type: approvalType,
+      approver_email: document.getElementById("approverEmail").value.trim(),
+      approver_name: document.getElementById("approverName").value.trim(),
+      cc_email: document.getElementById("ccEmail").value.trim(),
+      request_data: requestData,
+    };
+
+    submitBtn.disabled = true;
+    statusEl.textContent = "Submitting...";
+
+    try {
+      const { data, error } = await supabaseClient
+        .from("approval_requests")
+        .insert(payload)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Fire the email-sending function; don't block the success message on it.
+      fetch(SEND_EMAIL_FUNCTION_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: data.id }),
+      }).catch(err => console.error("Email trigger failed:", err));
+
+      statusEl.textContent = "Request submitted! An approval email has been sent.";
+      statusEl.className = "success";
+      e.target.reset();
+      sections.forEach(s => s.classList.remove("active"));
+
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Something went wrong: " + err.message;
+      statusEl.className = "error";
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
+
+</body>
+</html>
