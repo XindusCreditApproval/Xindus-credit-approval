@@ -159,7 +159,7 @@
       const { data, error } = await supabaseClient
         .from("approval_requests")
         .insert(payload)
-        .select()
+        .select("id")
         .single();
 
       if (error) throw error;
