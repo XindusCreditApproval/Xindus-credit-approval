@@ -112,7 +112,9 @@
 </form>
 
 <script>
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
 
   const typeSelect = document.getElementById("approvalType");
   const sections = document.querySelectorAll(".section");
