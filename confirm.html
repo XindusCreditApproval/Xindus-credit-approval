@@ -3,146 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Approval Request</title>
-<style>
-  body { margin: 0; background: #f5f5f5; font-family: Arial, sans-serif; }
-  .card {
-    max-width: 480px; margin: 40px auto; background: #fff; padding: 30px;
-    border-radius: 8px; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-  }
-  h2 { margin-top: 0; }
-  label { display: block; text-align: left; font-weight: bold; margin-top: 14px; font-size: 14px; }
-  input, textarea {
-    width: 100%; box-sizing: border-box; padding: 8px; margin-top: 4px;
-    border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
-  }
-  button {
-    margin-top: 20px; padding: 12px 25px; border: none; border-radius: 5px;
-    color: #fff; font-weight: bold; font-size: 15px; cursor: pointer;
-  }
-  #err { color: #d93025; font-size: 13px; margin-top: 10px; }
-  #loading { color: #666; }
-</style>
+<title>Redirecting…</title>
+<!-- Old approval links point here. Forward them (with ?action=&token=) to the new approval page. -->
+<script>
+  window.location.replace("https://xinduscreditapproval.netlify.app/" + window.location.search);
+</script>
+<noscript>
+  <meta http-equiv="refresh" content="0; url=https://xinduscreditapproval.netlify.app/">
+</noscript>
 </head>
-<body>
-
-<div class="card" id="card">
-  <p id="loading">Loading...</p>
-</div>
-
-<!-- EDIT this to your deployed approve-reject Edge Function URL -->
-<script>
-  const APPROVE_REJECT_URL = "https://mhvxlgqkfxghpkjfvude.functions.supabase.co/approve-reject";
-</script>
-
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const action = params.get("action");
-  const token = params.get("token");
-  const card = document.getElementById("card");
-
-  const label = action === "approve" ? "APPROVE" : "REJECT";
-  const color = action === "approve" ? "#188038" : "#d93025";
-
-  function renderError(message) {
-    card.innerHTML = `<h2>${message}</h2>`;
-  }
-
-  function renderForm() {
-    card.innerHTML = `
-      <h2>Confirm your decision</h2>
-      <p>You are about to mark this request as <b>${label}</b>.</p>
-      <label>Confirm your email address:</label>
-      <input id="confirmEmail" type="email" placeholder="you@xindus.net" required>
-      ${action === "reject" ? `<label>Reason (optional):</label><textarea id="reason" rows="3"></textarea>` : ""}
-      <br>
-      <button id="confirmBtn" style="background:${color};">Confirm ${label}</button>
-      <p id="err"></p>
-    `;
-    document.getElementById("confirmBtn").addEventListener("click", submitDecision);
-  }
-
-  function renderSuccess(status) {
-    card.innerHTML = `
-      <h2>Thanks for your response!</h2>
-      <p>Recorded as: <b>${status}</b></p>
-      <p>You can close this window.</p>
-    `;
-  }
-
-  async function submitDecision() {
-    const email = document.getElementById("confirmEmail").value.trim();
-    const errEl = document.getElementById("err");
-    if (!email) {
-      errEl.textContent = "Please enter your email address.";
-      return;
-    }
-    const reasonEl = document.getElementById("reason");
-    const url = new URL(APPROVE_REJECT_URL);
-    url.searchParams.set("action", action);
-    url.searchParams.set("token", token);
-    url.searchParams.set("confirm", "1");
-    url.searchParams.set("approver_email", email);
-    if (reasonEl && reasonEl.value) url.searchParams.set("reason", reasonEl.value);
-
-    document.getElementById("confirmBtn").disabled = true;
-    errEl.textContent = "Submitting...";
-
-    try {
-      const res = await fetch(url.toString());
-      const data = await res.json();
-      if (data.ok) {
-        renderSuccess(data.status);
-      } else {
-        handleErrorCode(data);
-      }
-    } catch (e) {
-      errEl.textContent = "Network error, please try again.";
-      document.getElementById("confirmBtn").disabled = false;
-    }
-  }
-
-  function handleErrorCode(data) {
-    switch (data.error) {
-      case "unauthorized":
-        renderError("Not Authorized — Only approver email id can approve or reject.");
-        break;
-      case "already_processed":
-        renderError(`This request has already been processed. Status: <b>${data.status}</b>`);
-        break;
-      case "expired":
-        renderError(`This link has expired. Approval links are valid for ${data.expiry_days} days. Please contact the Xindus team for a new link.`);
-        break;
-      case "not_found":
-        renderError("Approval request not found. This link may be invalid or the request was removed.");
-        break;
-      default:
-        renderError("Something went wrong. Please try again or contact the Xindus team.");
-    }
-  }
-
-  // Initial load: validate the link before showing the form.
-  (async function init() {
-    if (!action || !token || (action !== "approve" && action !== "reject")) {
-      renderError("Invalid approval link.");
-      return;
-    }
-    try {
-      const url = new URL(APPROVE_REJECT_URL);
-      url.searchParams.set("action", action);
-      url.searchParams.set("token", token);
-      const res = await fetch(url.toString());
-      const data = await res.json();
-      if (data.ok && data.ready) {
-        renderForm();
-      } else {
-        handleErrorCode(data);
-      }
-    } catch (e) {
-      renderError("Could not reach the server. Please try again shortly.");
-    }
-  })();
-</script>
-
+<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 60px; color: #555;">
+  <p>Redirecting to the approval page…</p>
 </body>
 </html>
