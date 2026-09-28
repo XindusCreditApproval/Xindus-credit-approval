@@ -173,6 +173,9 @@
     try {
       const amount = getRoutingAmount(approvalType, requestData);
       const route = await resolveRoutingFromDB(approvalType, amount);
+      
+      // Generating Token beforehand so DB and Email match 100%
+      const token = crypto.randomUUID();
 
       const payload = {
         approval_type: approvalType,
@@ -180,6 +183,7 @@
         approver_name: route.name,
         cc_email: route.cc,
         request_data: requestData,
+        approval_token: token,
         status: "Pending"
       };
 
@@ -194,7 +198,7 @@
       fetch(SEND_EMAIL_FUNCTION_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: data.id }),
+        body: JSON.stringify({ id: data.id, token: token }),
       }).catch(err => console.error("Email trigger error:", err));
 
       statusEl.textContent = "Request submitted successfully!";
