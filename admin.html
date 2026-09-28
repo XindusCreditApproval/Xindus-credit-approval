@@ -22,114 +22,181 @@
     .badge-approved { background: #e6f4ea; color: #137333; }
     .badge-rejected { background: #fce8e6; color: #c5221f; }
 
-    .matrix-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
+    .matrix-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
     .matrix-form input, .matrix-form select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
-    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
     .btn-primary { background: #188038; color: white; }
-    .btn-danger { background: #d93025; color: white; padding: 4px 8px; font-size: 11px; border-radius: 3px; }
+    .btn-warning { background: #f2994a; color: white; }
+    .btn-danger { background: #d93025; color: white; }
+    .btn-secondary { background: #6c757d; color: white; }
+    
+    /* Login Modal Overlay */
+    #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    .auth-box { background: white; padding: 35px; border-radius: 8px; text-align: center; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .google-btn { background: #4285F4; color: white; padding: 10px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
   </style>
 </head>
 <body>
 
-  <header>
-    <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Approval Management</div>
-    <button onclick="refreshAll()" class="btn btn-primary" style="background:#0d5e27;">Refresh Data</button>
-  </header>
+  <!-- Google Authentication Modal -->
+  <div id="authOverlay">
+    <div class="auth-box">
+      <h3 style="margin-top:0; color:#188038;">Xindus Admin Login</h3>
+      <p style="font-size:13px; color:#666; margin-bottom: 20px;">Please login with your official <strong>@xindus.net</strong> email</p>
+      <button onclick="loginWithGoogle()" class="google-btn">
+        Login with Google
+      </button>
+      <p id="loginError" style="color:red; font-size:12px; margin-top:15px; display:none;"></p>
+    </div>
+  </div>
 
-  <div class="container">
+  <div id="mainDashboard" style="display:none;">
+    <header>
+      <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Approval Management</div>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <span id="userEmailSpan" style="font-size:12px; opacity:0.9;"></span>
+        <button onclick="refreshAll()" class="btn btn-primary" style="background:#0d5e27;">Refresh Data</button>
+        <button onclick="logout()" class="btn btn-danger">Logout</button>
+      </div>
+    </header>
 
-    <!-- Section 1: Dynamic Approval Matrix (Rules Editor) -->
-    <div class="card">
-      <h2>1. Dynamic Approval Matrix Rules Manager</h2>
-      
-      <form id="addMatrixForm" onsubmit="addMatrixRow(event)" class="matrix-form">
-        <div>
-          <label style="font-size:11px; font-weight:bold;">Approval Type</label>
-          <select id="m_type" required>
-            <option value="">-- Select Type --</option>
-            <option value="credit limit extension">Credit Limit Extension</option>
-            <option value="insurer rejection - credit limit exception">Insurer Rejection – Credit Limit Exception</option>
-            <option value="temporary credit - insurer approval under process">Temporary Credit – Insurer Approval Under Process</option>
+    <div class="container">
+
+      <!-- Section 1: Dynamic Approval Matrix Rules Manager -->
+      <div class="card">
+        <h2>1. Dynamic Approval Matrix Rules Manager</h2>
+        
+        <form id="addMatrixForm" onsubmit="handleMatrixSubmit(event)" class="matrix-form">
+          <input type="hidden" id="m_edit_id" value="">
+          <div>
+            <label style="font-size:11px; font-weight:bold;">Approval Type</label>
+            <select id="m_type" required>
+              <option value="">-- Select Type --</option>
+              <option value="credit limit extension">Credit Limit Extension</option>
+              <option value="insurer rejection - credit limit exception">Insurer Rejection – Credit Limit Exception</option>
+              <option value="temporary credit - insurer approval under process">Temporary Credit – Insurer Approval Under Process</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold;">Limit From (₹)</label>
+            <input type="number" step="any" id="m_from" placeholder="0" required>
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold;">Limit To (₹)</label>
+            <input type="number" step="any" id="m_to" placeholder="50000" required>
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold;">Approver Email(s)</label>
+            <input type="text" id="m_email" placeholder="app1@xindus.net, app2@xindus.net" required>
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold;">Approver Name</label>
+            <input type="text" id="m_name" placeholder="e.g. Vikas / Management">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold;">CC Emails (Comma separated)</label>
+            <input type="text" id="m_cc" placeholder="cc1@xindus.net, cc2@xindus.net">
+          </div>
+          <div style="display: flex; gap: 5px; align-items: flex-end;">
+            <button type="submit" id="submitBtn" class="btn btn-primary" style="width:100%;">+ Add Rule</button>
+            <button type="button" id="cancelEditBtn" onclick="resetMatrixForm()" class="btn btn-secondary" style="display:none;">Cancel</button>
+          </div>
+        </form>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Approval Type</th>
+              <th>Limit From</th>
+              <th>Limit To</th>
+              <th>Approver Email(s)</th>
+              <th>Approver Name</th>
+              <th>CC Emails</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="matrixTable">
+            <tr><td colspan="7">Loading matrix rules...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Section 2: Requests Tracking Dashboard -->
+      <div class="card">
+        <h2>2. Approval Requests Tracking Dashboard</h2>
+        <div style="margin-bottom: 15px; display:flex; gap:10px; align-items:center;">
+          <label style="font-weight:bold; font-size:13px;">Filter Status: </label>
+          <select id="statusFilter" onchange="loadRequests()" style="padding: 6px 12px; border-radius:4px; border:1px solid #ccc;">
+            <option value="ALL">All Requests</option>
+            <option value="Pending">Pending</option>
+            <option value="Approved">Approved</option>
+            <option value="Rejected">Rejected</option>
           </select>
         </div>
-        <div>
-          <label style="font-size:11px; font-weight:bold;">Limit From (₹)</label>
-          <input type="number" step="any" id="m_from" placeholder="0" required>
-        </div>
-        <div>
-          <label style="font-size:11px; font-weight:bold;">Limit To (₹)</label>
-          <input type="number" step="any" id="m_to" placeholder="50000" required>
-        </div>
-        <div>
-          <label style="font-size:11px; font-weight:bold;">Approver Email</label>
-          <input type="email" id="m_email" placeholder="approver@xindus.net" required>
-        </div>
-        <div>
-          <label style="font-size:11px; font-weight:bold;">Approver Name</label>
-          <input type="text" id="m_name" placeholder="e.g. Vikas">
-        </div>
-        <div>
-          <label style="font-size:11px; font-weight:bold;">CC Emails (Comma separated)</label>
-          <input type="text" id="m_cc" placeholder="cc1@xindus.net, cc2@xindus.net">
-        </div>
-        <div style="display: flex; align-items: flex-end;">
-          <button type="submit" class="btn btn-primary" style="width:100%;">+ Add Rule</button>
-        </div>
-      </form>
-
-      <table>
-        <thead>
-          <tr>
-            <th>Approval Type</th>
-            <th>Limit From</th>
-            <th>Limit To</th>
-            <th>Approver Email</th>
-            <th>Approver Name</th>
-            <th>CC Emails</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="matrixTable">
-          <tr><td colspan="7">Loading matrix rules...</td></tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Section 2: Requests Tracking & Aging -->
-    <div class="card">
-      <h2>2. Approval Requests Tracking Dashboard</h2>
-      <div style="margin-bottom: 15px; display:flex; gap:10px; align-items:center;">
-        <label style="font-weight:bold; font-size:13px;">Filter Status: </label>
-        <select id="statusFilter" onchange="loadRequests()" style="padding: 6px 12px; border-radius:4px; border:1px solid #ccc;">
-          <option value="ALL">All Requests</option>
-          <option value="Pending">Pending</option>
-          <option value="Approved">Approved</option>
-          <option value="Rejected">Rejected</option>
-        </select>
+        <table>
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Approval Type</th>
+              <th>Approver Email</th>
+              <th>Status</th>
+              <th>Remarks</th>
+              <th>Submitted Date</th>
+            </tr>
+          </thead>
+          <tbody id="requestsTable">
+            <tr><td colspan="6">Loading requests...</td></tr>
+          </tbody>
+        </table>
       </div>
-      <table>
-        <thead>
-          <tr>
-            <th>Request ID</th>
-            <th>Approval Type</th>
-            <th>Approver Email</th>
-            <th>Status</th>
-            <th>Remarks</th>
-            <th>Submitted Date</th>
-          </tr>
-        </thead>
-        <tbody id="requestsTable">
-          <tr><td colspan="6">Loading requests...</td></tr>
-        </tbody>
-      </table>
-    </div>
 
+    </div>
   </div>
 
 <script>
   const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  let matrixCache = [];
+
+  async function loginWithGoogle() {
+    const { error } = await supabaseClient.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href }
+    });
+    if (error) showError("Login Error: " + error.message);
+  }
+
+  async function checkSession() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session && session.user) {
+      const email = session.user.email;
+      if (email.endsWith("@xindus.net")) {
+        document.getElementById("authOverlay").style.display = "none";
+        document.getElementById("mainDashboard").style.display = "block";
+        document.getElementById("userEmailSpan").innerText = email;
+        refreshAll();
+      } else {
+        await supabaseClient.auth.signOut();
+        showError("Access Denied: Only @xindus.net email addresses are allowed.");
+      }
+    } else {
+      document.getElementById("authOverlay").style.display = "flex";
+      document.getElementById("mainDashboard").style.display = "none";
+    }
+  }
+
+  async function logout() {
+    await supabaseClient.auth.signOut();
+    window.location.reload();
+  }
+
+  function showError(msg) {
+    const errBox = document.getElementById("loginError");
+    errBox.innerText = msg;
+    errBox.style.display = "block";
+  }
 
   async function loadRequests() {
     const tbody = document.getElementById("requestsTable");
@@ -171,6 +238,8 @@
       return;
     }
 
+    matrixCache = data;
+
     if (data.length === 0) {
       tbody.innerHTML = "<tr><td colspan='7'>No rules configured yet. Add your first rule above.</td></tr>";
       return;
@@ -184,13 +253,44 @@
         <td><strong>${m.approver_email}</strong></td>
         <td>${m.approver_name || '-'}</td>
         <td>${m.cc_emails || '-'}</td>
-        <td><button class="btn btn-danger" onclick="deleteMatrixRow(${m.id})">Delete</button></td>
+        <td style="display:flex; gap:5px;">
+          <button class="btn btn-warning" onclick="editMatrixRow(${m.id})">Edit</button>
+          <button class="btn btn-danger" onclick="deleteMatrixRow(${m.id})">Delete</button>
+        </td>
       </tr>
     `).join('');
   }
 
-  async function addMatrixRow(e) {
+  function editMatrixRow(id) {
+    const row = matrixCache.find(item => item.id === id);
+    if (!row) return;
+
+    document.getElementById("m_edit_id").value = row.id;
+    document.getElementById("m_type").value = row.approval_type;
+    document.getElementById("m_from").value = row.limit_from;
+    document.getElementById("m_to").value = row.limit_to;
+    document.getElementById("m_email").value = row.approver_email;
+    document.getElementById("m_name").value = row.approver_name || '';
+    document.getElementById("m_cc").value = row.cc_emails || '';
+
+    document.getElementById("submitBtn").innerText = "Update Rule";
+    document.getElementById("submitBtn").style.background = "#f2994a";
+    document.getElementById("cancelEditBtn").style.display = "inline-block";
+    
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function resetMatrixForm() {
+    document.getElementById("addMatrixForm").reset();
+    document.getElementById("m_edit_id").value = "";
+    document.getElementById("submitBtn").innerText = "+ Add Rule";
+    document.getElementById("submitBtn").style.background = "#188038";
+    document.getElementById("cancelEditBtn").style.display = "none";
+  }
+
+  async function handleMatrixSubmit(e) {
     e.preventDefault();
+    const editId = document.getElementById("m_edit_id").value;
     const row = {
       approval_type: document.getElementById("m_type").value,
       limit_from: parseFloat(document.getElementById("m_from").value),
@@ -200,11 +300,17 @@
       cc_emails: document.getElementById("m_cc").value.trim()
     };
 
-    const { error } = await supabaseClient.from("approval_matrix").insert([row]);
-    if (error) {
-      alert("Error adding rule: " + error.message);
+    let result;
+    if (editId) {
+      result = await supabaseClient.from("approval_matrix").update(row).eq("id", editId);
     } else {
-      document.getElementById("addMatrixForm").reset();
+      result = await supabaseClient.from("approval_matrix").insert([row]);
+    }
+
+    if (result.error) {
+      alert("Error saving rule: " + result.error.message);
+    } else {
+      resetMatrixForm();
       loadMatrix();
     }
   }
@@ -221,7 +327,7 @@
     loadMatrix();
   }
 
-  refreshAll();
+  checkSession();
 </script>
 
 </body>
