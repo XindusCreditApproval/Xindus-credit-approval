@@ -39,7 +39,7 @@
 </head>
 <body>
 
-  <!-- Google Authentication Modal (Locked Default) -->
+  <!-- Google Authentication Modal -->
   <div id="authOverlay" style="display: flex;">
     <div class="auth-box">
       <h3 style="margin-top:0; color:#188038;">Xindus Admin Login</h3>
@@ -51,7 +51,7 @@
     </div>
   </div>
 
-  <!-- Main Dashboard Content (Hidden Default) -->
+  <!-- Main Dashboard Content -->
   <div id="mainDashboard" style="display:none;">
     <header>
       <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Portal</div>
@@ -64,7 +64,7 @@
 
     <div class="container">
 
-      <!-- Section 0: Admin Access Manager (Grant/Revoke Access) -->
+      <!-- Section 0: Admin Access Manager -->
       <div class="card" style="border: 1px solid #188038; background: #f4faf6;">
         <h2 style="color: #0d5e27;">🔐 Admin Access Manager (Grant Access To Users)</h2>
         <p style="font-size: 12px; color: #555;">Kisaan / Employee ko Admin Access dene ke liye unka official email yahan add karein. Unke paas bhi doosron ko access dene ka option hoga.</p>
@@ -190,7 +190,7 @@
   async function loginWithGoogle() {
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href }
+      options: { redirectTo: window.location.origin + window.location.pathname }
     });
     if (error) showError("Login Error: " + error.message);
   }
@@ -199,12 +199,20 @@
     document.getElementById("mainDashboard").style.display = "none";
     document.getElementById("authOverlay").style.display = "flex";
 
+    // Auto-fix URL hash issue if double hash (##) is present from Google Redirect
+    if (window.location.hash.startsWith("##")) {
+      window.location.hash = window.location.hash.replace("##", "#");
+    }
+
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
       currentUserEmail = session.user.email ? session.user.email.toLowerCase().trim() : "";
       
       // Check in Supabase Allowed Admins Table
-      const { data: adminList, error } = await supabaseClient.from("allowed_admins").select("email").eq("email", currentUserEmail);
+      const { data: adminList, error } = await supabaseClient
+        .from("allowed_admins")
+        .select("email")
+        .eq("email", currentUserEmail);
 
       if (adminList && adminList.length > 0) {
         document.getElementById("authOverlay").style.display = "none";
@@ -221,9 +229,16 @@
     }
   }
 
+  // Handle Auth State Changes Live
+  supabaseClient.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      checkSession();
+    }
+  });
+
   async function logout() {
     await supabaseClient.auth.signOut();
-    window.location.reload();
+    window.location.href = window.location.origin + window.location.pathname;
   }
 
   function showError(msg) {
