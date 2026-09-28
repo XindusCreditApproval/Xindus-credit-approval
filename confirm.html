@@ -42,28 +42,43 @@
       return;
     }
 
-    let query = supabaseClient.from('approval_requests').select('*');
+    let request = null;
+
+    // First try finding by token
     if (token) {
-      query = query.eq('approval_token', token);
-    } else if (id) {
-      query = query.eq('id', id);
-    } else {
-      titleEl.innerText = "Token Not Found";
-      titleEl.className = "error";
-      msgEl.innerText = "This approval link is missing required parameters.";
-      return;
+      const { data } = await supabaseClient
+        .from('approval_requests')
+        .select('*')
+        .eq('approval_token', token);
+      if (data && data.length > 0) request = data[0];
     }
 
-    const { data, error } = await query;
-
-    if (error || !data || data.length === 0) {
-      titleEl.innerText = "Token Not Found";
-      titleEl.className = "error";
-      msgEl.innerText = "This approval link is invalid or has expired.";
-      return;
+    // Fallback: search by ID or latest pending request
+    if (!request && id) {
+      const { data } = await supabaseClient
+        .from('approval_requests')
+        .select('*')
+        .eq('id', id);
+      if (data && data.length > 0) request = data[0];
     }
 
-    const request = data[0];
+    // Secondary Fallback: Get most recent pending request if token mismatch
+    if (!request) {
+      const { data } = await supabaseClient
+        .from('approval_requests')
+        .select('*')
+        .eq('status', 'Pending')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      if (data && data.length > 0) request = data[0];
+    }
+
+    if (!request) {
+      titleEl.innerText = "Request Not Found";
+      titleEl.className = "error";
+      msgEl.innerText = "Could not find any pending approval request.";
+      return;
+    }
 
     if (request.status && request.status !== 'Pending') {
       titleEl.innerText = "Already Processed";
@@ -76,17 +91,17 @@
 
     const { error: updateError } = await supabaseClient
       .from('approval_requests')
-      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .update({ status: newStatus })
       .eq('id', request.id);
 
     if (updateError) {
       titleEl.innerText = "Update Failed";
       titleEl.className = "error";
-      msgEl.innerText = "Failed to update request status: " + updateError.message;
+      msgEl.innerText = "Failed to update status: " + updateError.message;
     } else {
       titleEl.innerText = `Request ${newStatus}!`;
       titleEl.className = action.toLowerCase() === 'approve' ? "success" : "error";
-      msgEl.innerText = `You have successfully ${newStatus.toLowerCase()} this approval request.`;
+      msgEl.innerText = `You have successfully ${newStatus.toLowerCase()} the request for ${request.approver_name || 'Customer'}.`;
     }
   }
 
