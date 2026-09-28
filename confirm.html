@@ -3,12 +3,24 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Approval Status</title>
+  <title>Approval Decision</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 450px; width: 100%; }
-    h2 { margin-top: 0; }
+    body { font-family: Arial, sans-serif; background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+    .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 480px; width: 100%; text-align: center; }
+    h2 { margin-top: 0; color: #333; }
+    .action-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: bold; margin-bottom: 15px; font-size: 14px; text-transform: uppercase; }
+    .approve-badge { background: #e6f4ea; color: #137333; }
+    .reject-badge { background: #fce8e6; color: #c5221f; }
+    label { display: block; text-align: left; font-weight: bold; margin-top: 15px; font-size: 14px; color: #555; }
+    textarea { width: 100%; box-sizing: border-box; padding: 10px; margin-top: 6px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; resize: vertical; }
+    button { width: 100%; padding: 12px; border: none; border-radius: 5px; font-size: 15px; font-weight: bold; color: white; cursor: pointer; margin-top: 20px; }
+    .btn-approve { background-color: #188038; }
+    .btn-approve:hover { background-color: #137333; }
+    .btn-reject { background-color: #d93025; }
+    .btn-reject:hover { background-color: #c5221f; }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    #status { margin-top: 15px; font-weight: bold; }
     .success { color: #188038; }
     .error { color: #d93025; }
     .info { color: #1a73e8; }
@@ -16,9 +28,20 @@
 </head>
 <body>
 
-<div class="card">
-  <h2 id="title">Processing...</h2>
-  <p id="message">Please wait while we process your request.</p>
+<div class="card" id="mainCard">
+  <h2 id="title">Loading Request...</h2>
+  <p id="subMessage">Checking approval parameters...</p>
+
+  <form id="decisionForm" style="display: none;">
+    <div id="badgeContainer"></div>
+
+    <label for="remarks">Remarks / Comments <span id="reqStar" style="color:red; display:none;">*</span></label>
+    <textarea id="remarks" rows="4" placeholder="Enter reason or comments here..."></textarea>
+
+    <button type="submit" id="submitBtn">Confirm Decision</button>
+  </form>
+
+  <div id="status"></div>
 </div>
 
 <script>
@@ -26,86 +49,106 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function processConfirmation() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const action = urlParams.get('action');
-    const token = urlParams.get('token');
-    const id = urlParams.get('id');
+  const urlParams = new URLSearchParams(window.location.search);
+  const action = (urlParams.get('action') || '').toLowerCase();
+  const token = urlParams.get('token');
+  const id = urlParams.get('id');
 
+  let currentRequest = null;
+
+  async function init() {
     const titleEl = document.getElementById('title');
-    const msgEl = document.getElementById('message');
+    const subMessageEl = document.getElementById('subMessage');
+    const formEl = document.getElementById('decisionForm');
+    const badgeContainer = document.getElementById('badgeContainer');
+    const submitBtn = document.getElementById('submitBtn');
+    const reqStar = document.getElementById('reqStar');
 
-    if (!action) {
-      titleEl.innerText = "Invalid Link";
-      titleEl.className = "error";
-      msgEl.innerText = "No action specified in the approval link.";
+    if (action !== 'approve' && action !== 'reject') {
+      titleEl.innerText = "Invalid Action";
+      subMessageEl.innerText = "The link does not specify a valid action (Approve or Reject).";
       return;
     }
 
-    let request = null;
-
-    // First try finding by token
+    // Lookup request in database
     if (token) {
-      const { data } = await supabaseClient
-        .from('approval_requests')
-        .select('*')
-        .eq('approval_token', token);
-      if (data && data.length > 0) request = data[0];
+      const { data } = await supabaseClient.from('approval_requests').select('*').eq('approval_token', token);
+      if (data && data.length > 0) currentRequest = data[0];
+    }
+    if (!currentRequest && id) {
+      const { data } = await supabaseClient.from('approval_requests').select('*').eq('id', id);
+      if (data && data.length > 0) currentRequest = data[0];
+    }
+    if (!currentRequest) {
+      const { data } = await supabaseClient.from('approval_requests').select('*').eq('status', 'Pending').order('created_at', { ascending: false }).limit(1);
+      if (data && data.length > 0) currentRequest = data[0];
     }
 
-    // Fallback: search by ID or latest pending request
-    if (!request && id) {
-      const { data } = await supabaseClient
-        .from('approval_requests')
-        .select('*')
-        .eq('id', id);
-      if (data && data.length > 0) request = data[0];
-    }
-
-    // Secondary Fallback: Get most recent pending request if token mismatch
-    if (!request) {
-      const { data } = await supabaseClient
-        .from('approval_requests')
-        .select('*')
-        .eq('status', 'Pending')
-        .order('created_at', { ascending: false })
-        .limit(1);
-      if (data && data.length > 0) request = data[0];
-    }
-
-    if (!request) {
+    if (!currentRequest) {
       titleEl.innerText = "Request Not Found";
-      titleEl.className = "error";
-      msgEl.innerText = "Could not find any pending approval request.";
+      subMessageEl.innerText = "Could not find any pending request associated with this link.";
       return;
     }
 
-    if (request.status && request.status !== 'Pending') {
+    if (currentRequest.status && currentRequest.status !== 'Pending') {
       titleEl.innerText = "Already Processed";
       titleEl.className = "info";
-      msgEl.innerText = `This request has already been ${request.status.toLowerCase()}.`;
+      subMessageEl.innerText = `This request has already been ${currentRequest.status.toLowerCase()}.`;
       return;
     }
 
-    const newStatus = action.toLowerCase() === 'approve' ? 'Approved' : 'Rejected';
+    // Render Form
+    titleEl.innerText = "Confirm Action";
+    subMessageEl.innerText = `You are about to submit a decision for request #${currentRequest.id.slice(0, 8)}.`;
 
-    const { error: updateError } = await supabaseClient
-      .from('approval_requests')
-      .update({ status: newStatus })
-      .eq('id', request.id);
-
-    if (updateError) {
-      titleEl.innerText = "Update Failed";
-      titleEl.className = "error";
-      msgEl.innerText = "Failed to update status: " + updateError.message;
+    if (action === 'approve') {
+      badgeContainer.innerHTML = '<span class="action-badge approve-badge">Action: APPROVE</span>';
+      submitBtn.innerText = "Submit Approval";
+      submitBtn.className = "btn-approve";
     } else {
-      titleEl.innerText = `Request ${newStatus}!`;
-      titleEl.className = action.toLowerCase() === 'approve' ? "success" : "error";
-      msgEl.innerText = `You have successfully ${newStatus.toLowerCase()} the request for ${request.approver_name || 'Customer'}.`;
+      badgeContainer.innerHTML = '<span class="action-badge reject-badge">Action: REJECT</span>';
+      submitBtn.innerText = "Submit Rejection";
+      submitBtn.className = "btn-reject";
+      reqStar.style.display = "inline"; // Remarks mandatory on Reject
+      document.getElementById('remarks').required = true;
     }
+
+    formEl.style.display = "block";
   }
 
-  processConfirmation();
+  document.getElementById('decisionForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const submitBtn = document.getElementById('submitBtn');
+    const statusEl = document.getElementById('status');
+    const remarksVal = document.getElementById('remarks').value.trim();
+
+    submitBtn.disabled = true;
+    statusEl.innerText = "Updating status...";
+
+    const newStatus = action === 'approve' ? 'Approved' : 'Rejected';
+
+    const { error } = await supabaseClient
+      .from('approval_requests')
+      .update({
+        status: newStatus,
+        remarks: remarksVal,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', currentRequest.id);
+
+    if (error) {
+      statusEl.className = "error";
+      statusEl.innerText = "Error: " + error.message;
+      submitBtn.disabled = false;
+    } else {
+      document.getElementById('decisionForm').style.display = "none";
+      document.getElementById('title').innerText = `Request ${newStatus}!`;
+      document.getElementById('title').className = action === 'approve' ? "success" : "error";
+      document.getElementById('subMessage').innerText = `Your response (${newStatus}) and remarks have been successfully recorded.`;
+    }
+  });
+
+  init();
 </script>
 
 </body>
