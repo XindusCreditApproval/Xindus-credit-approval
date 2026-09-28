@@ -3,51 +3,128 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Xindus — Admin Approval Dashboard</title>
+  <title>Xindus — Admin Approval & Rules Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f8f9fa; }
-    h1 { color: #188038; }
-    .controls { margin-bottom: 20px; display: flex; gap: 10px; }
-    select, input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-    table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
-    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
-    th { background-color: #f1f3f4; }
-    .badge { padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; text-transform: uppercase; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f8f9fa; color: #333; }
+    header { background: #188038; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+    .container { padding: 30px; max-width: 1300px; margin: 0 auto; }
+    .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 30px; }
+    h2 { margin-top: 0; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; font-size: 18px; color: #188038; }
+    
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
+    th { background-color: #f1f3f4; font-weight: 600; color: #555; }
+    tr:hover { background-color: #f8fbff; }
+
+    .badge { padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
     .badge-pending { background: #fef7e0; color: #b06000; }
     .badge-approved { background: #e6f4ea; color: #137333; }
     .badge-rejected { background: #fce8e6; color: #c5221f; }
+
+    .matrix-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
+    .matrix-form input, .matrix-form select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-primary { background: #188038; color: white; }
+    .btn-danger { background: #d93025; color: white; padding: 4px 8px; font-size: 11px; border-radius: 3px; }
   </style>
 </head>
 <body>
 
-  <h1>Admin Approval Tracking Dashboard</h1>
+  <header>
+    <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Approval Management</div>
+    <button onclick="refreshAll()" class="btn btn-primary" style="background:#0d5e27;">Refresh Data</button>
+  </header>
 
-  <div class="controls">
-    <select id="statusFilter">
-      <option value="ALL">All Status</option>
-      <option value="Pending">Pending</option>
-      <option value="Approved">Approved</option>
-      <option value="Rejected">Rejected</option>
-    </select>
-    <button onclick="loadRequests()" style="padding: 8px 16px; background:#188038; color:white; border:none; border-radius:4px; cursor:pointer;">Refresh</button>
+  <div class="container">
+
+    <!-- Section 1: Dynamic Approval Matrix (Rules Editor) -->
+    <div class="card">
+      <h2>1. Dynamic Approval Matrix Rules Manager</h2>
+      
+      <form id="addMatrixForm" onsubmit="addMatrixRow(event)" class="matrix-form">
+        <div>
+          <label style="font-size:11px; font-weight:bold;">Approval Type</label>
+          <select id="m_type" required>
+            <option value="">-- Select Type --</option>
+            <option value="credit limit extension">Credit Limit Extension</option>
+            <option value="insurer rejection - credit limit exception">Insurer Rejection – Credit Limit Exception</option>
+            <option value="temporary credit - insurer approval under process">Temporary Credit – Insurer Approval Under Process</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:bold;">Limit From (₹)</label>
+          <input type="number" step="any" id="m_from" placeholder="0" required>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:bold;">Limit To (₹)</label>
+          <input type="number" step="any" id="m_to" placeholder="50000" required>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:bold;">Approver Email</label>
+          <input type="email" id="m_email" placeholder="approver@xindus.net" required>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:bold;">Approver Name</label>
+          <input type="text" id="m_name" placeholder="e.g. Vikas">
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:bold;">CC Emails (Comma separated)</label>
+          <input type="text" id="m_cc" placeholder="cc1@xindus.net, cc2@xindus.net">
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+          <button type="submit" class="btn btn-primary" style="width:100%;">+ Add Rule</button>
+        </div>
+      </form>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Approval Type</th>
+            <th>Limit From</th>
+            <th>Limit To</th>
+            <th>Approver Email</th>
+            <th>Approver Name</th>
+            <th>CC Emails</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="matrixTable">
+          <tr><td colspan="7">Loading matrix rules...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 2: Requests Tracking & Aging -->
+    <div class="card">
+      <h2>2. Approval Requests Tracking Dashboard</h2>
+      <div style="margin-bottom: 15px; display:flex; gap:10px; align-items:center;">
+        <label style="font-weight:bold; font-size:13px;">Filter Status: </label>
+        <select id="statusFilter" onchange="loadRequests()" style="padding: 6px 12px; border-radius:4px; border:1px solid #ccc;">
+          <option value="ALL">All Requests</option>
+          <option value="Pending">Pending</option>
+          <option value="Approved">Approved</option>
+          <option value="Rejected">Rejected</option>
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Request ID</th>
+            <th>Approval Type</th>
+            <th>Approver Email</th>
+            <th>Status</th>
+            <th>Remarks</th>
+            <th>Submitted Date</th>
+          </tr>
+        </thead>
+        <tbody id="requestsTable">
+          <tr><td colspan="6">Loading requests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
   </div>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Request ID</th>
-        <th>Approval Type</th>
-        <th>Approver Email</th>
-        <th>Status</th>
-        <th>Remarks</th>
-        <th>Submitted Date</th>
-      </tr>
-    </thead>
-    <tbody id="requestsTable">
-      <tr><td colspan="6">Loading requests...</td></tr>
-    </tbody>
-  </table>
 
 <script>
   const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
@@ -60,12 +137,9 @@
     tbody.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
 
     let query = supabaseClient.from("approval_requests").select("*").order("created_at", { ascending: false });
-    if (filter !== "ALL") {
-      query = query.eq("status", filter);
-    }
+    if (filter !== "ALL") query = query.eq("status", filter);
 
     const { data, error } = await query;
-
     if (error || !data) {
       tbody.innerHTML = `<tr><td colspan='6' style='color:red;'>Error loading data: ${error?.message}</td></tr>`;
       return;
@@ -88,8 +162,66 @@
     `).join('');
   }
 
-  document.getElementById("statusFilter").addEventListener("change", loadRequests);
-  loadRequests();
+  async function loadMatrix() {
+    const tbody = document.getElementById("matrixTable");
+    const { data, error } = await supabaseClient.from("approval_matrix").select("*").order("id", { ascending: true });
+
+    if (error || !data) {
+      tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Error loading matrix: ${error?.message}</td></tr>`;
+      return;
+    }
+
+    if (data.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='7'>No rules configured yet. Add your first rule above.</td></tr>";
+      return;
+    }
+
+    tbody.innerHTML = data.map(m => `
+      <tr>
+        <td>${m.approval_type}</td>
+        <td>₹${Number(m.limit_from).toLocaleString('en-IN')}</td>
+        <td>₹${Number(m.limit_to).toLocaleString('en-IN')}</td>
+        <td><strong>${m.approver_email}</strong></td>
+        <td>${m.approver_name || '-'}</td>
+        <td>${m.cc_emails || '-'}</td>
+        <td><button class="btn btn-danger" onclick="deleteMatrixRow(${m.id})">Delete</button></td>
+      </tr>
+    `).join('');
+  }
+
+  async function addMatrixRow(e) {
+    e.preventDefault();
+    const row = {
+      approval_type: document.getElementById("m_type").value,
+      limit_from: parseFloat(document.getElementById("m_from").value),
+      limit_to: parseFloat(document.getElementById("m_to").value),
+      approver_email: document.getElementById("m_email").value.trim(),
+      approver_name: document.getElementById("m_name").value.trim(),
+      cc_emails: document.getElementById("m_cc").value.trim()
+    };
+
+    const { error } = await supabaseClient.from("approval_matrix").insert([row]);
+    if (error) {
+      alert("Error adding rule: " + error.message);
+    } else {
+      document.getElementById("addMatrixForm").reset();
+      loadMatrix();
+    }
+  }
+
+  async function deleteMatrixRow(id) {
+    if (!confirm("Are you sure you want to delete this approval rule?")) return;
+    const { error } = await supabaseClient.from("approval_matrix").delete().eq("id", id);
+    if (error) alert("Error deleting rule: " + error.message);
+    else loadMatrix();
+  }
+
+  function refreshAll() {
+    loadRequests();
+    loadMatrix();
+  }
+
+  refreshAll();
 </script>
 
 </body>
