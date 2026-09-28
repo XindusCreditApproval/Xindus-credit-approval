@@ -1,26 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Approval Confirmation</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f4f6f8; }
-  .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 420px; width: 100%; }
-  h2 { margin-top: 0; color: #333; }
-  p { font-size: 15px; color: #666; margin-bottom: 20px; line-height: 1.5; }
-  .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #188038; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  .error { color: #d93025; font-size: 18px; font-weight: bold; }
-  .success { color: #188038; font-size: 18px; font-weight: bold; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Approval Status</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f6f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+    .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 450px; width: 100%; }
+    h2 { margin-top: 0; }
+    .success { color: #188038; }
+    .error { color: #d93025; }
+    .info { color: #1a73e8; }
+  </style>
 </head>
 <body>
 
-<div class="card" id="cardContent">
-  <div class="spinner"></div>
-  <p>Processing approval response, please wait...</p>
+<div class="card">
+  <h2 id="title">Processing...</h2>
+  <p id="message">Please wait while we process your request.</p>
 </div>
 
 <script>
@@ -28,31 +26,49 @@
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function processApproval() {
-    const card = document.getElementById("cardContent");
+  async function processConfirmation() {
     const urlParams = new URLSearchParams(window.location.search);
     const action = urlParams.get('action');
     const token = urlParams.get('token');
+    const id = urlParams.get('id');
 
-    if (!action || !token) {
-      card.innerHTML = `<h2 class="error">Invalid Approval Link</h2><p>This link is missing required action parameters. Please click directly from the official request email.</p>`;
+    const titleEl = document.getElementById('title');
+    const msgEl = document.getElementById('message');
+
+    if (!action) {
+      titleEl.innerText = "Invalid Link";
+      titleEl.className = "error";
+      msgEl.innerText = "No action specified in the approval link.";
       return;
     }
 
-    // Query approval_requests by token
-    const { data: request, error: fetchError } = await supabaseClient
-      .from('approval_requests')
-      .select('*')
-      .eq('approval_token', token)
-      .maybeSingle();
-
-    if (fetchError || !request) {
-      card.innerHTML = `<h2 class="error">Token Not Found</h2><p>This approval link is invalid or has expired.</p>`;
+    let query = supabaseClient.from('approval_requests').select('*');
+    if (token) {
+      query = query.eq('approval_token', token);
+    } else if (id) {
+      query = query.eq('id', id);
+    } else {
+      titleEl.innerText = "Token Not Found";
+      titleEl.className = "error";
+      msgEl.innerText = "This approval link is missing required parameters.";
       return;
     }
+
+    const { data, error } = await query;
+
+    if (error || !data || data.length === 0) {
+      titleEl.innerText = "Token Not Found";
+      titleEl.className = "error";
+      msgEl.innerText = "This approval link is invalid or has expired.";
+      return;
+    }
+
+    const request = data[0];
 
     if (request.status && request.status !== 'Pending') {
-      card.innerHTML = `<h2>Already Processed</h2><p>This request has already been marked as <b>${request.status}</b>.</p>`;
+      titleEl.innerText = "Already Processed";
+      titleEl.className = "info";
+      msgEl.innerText = `This request has already been ${request.status.toLowerCase()}.`;
       return;
     }
 
@@ -60,21 +76,21 @@
 
     const { error: updateError } = await supabaseClient
       .from('approval_requests')
-      .update({
-        status: newStatus,
-        action_taken_at: new Date().toISOString()
-      })
-      .eq('approval_token', token);
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', request.id);
 
     if (updateError) {
-      card.innerHTML = `<h2 class="error">Update Failed</h2><p>Unable to save response. Please try again or contact support.</p>`;
+      titleEl.innerText = "Update Failed";
+      titleEl.className = "error";
+      msgEl.innerText = "Failed to update request status: " + updateError.message;
     } else {
-      const color = newStatus === 'Approved' ? '#188038' : '#d93025';
-      card.innerHTML = `<h2 style="color:${color}">Request ${newStatus}!</h2><p>Your response has been saved. The status is now updated to <b>${newStatus}</b>.</p>`;
+      titleEl.innerText = `Request ${newStatus}!`;
+      titleEl.className = action.toLowerCase() === 'approve' ? "success" : "error";
+      msgEl.innerText = `You have successfully ${newStatus.toLowerCase()} this approval request.`;
     }
   }
 
-  processApproval();
+  processConfirmation();
 </script>
 
 </body>
