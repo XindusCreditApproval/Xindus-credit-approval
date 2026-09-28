@@ -1,121 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Admin Dashboard - Approval Requests</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; color: #333; }
-  h1 { font-size: 22px; margin-bottom: 20px; }
-  .stats-container { display: flex; gap: 20px; margin-bottom: 20px; }
-  .card { background: white; padding: 18px 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); flex: 1; border-top: 4px solid #188038; }
-  .card.pending-card { border-top-color: #e67e22; }
-  .card h3 { margin: 0; font-size: 13px; color: #666; text-transform: uppercase; }
-  .card p { margin: 8px 0 0; font-size: 28px; font-weight: bold; }
-  
-  .table-container { overflow-x: auto; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); }
-  table { width: 100%; border-collapse: collapse; text-align: left; }
-  th, td { padding: 12px 16px; border-bottom: 1px solid #eee; font-size: 14px; }
-  th { background: #f4f5f7; font-weight: bold; color: #555; }
-  
-  .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; display: inline-block; }
-  .badge-pending { background: #fef5e7; color: #e67e22; }
-  .badge-approved { background: #eafaf1; color: #27ae60; }
-  .badge-rejected { background: #fadbd8; color: #c0392b; }
-  
-  .aging-badge { color: #d93025; font-weight: bold; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xindus — Admin Approval Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f8f9fa; }
+    h1 { color: #188038; }
+    .controls { margin-bottom: 20px; display: flex; gap: 10px; }
+    select, input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; background: white; box-shadow: 0 1px 4px rgba(0,0,0,0.1); }
+    th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; font-size: 14px; }
+    th { background-color: #f1f3f4; }
+    .badge { padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 12px; text-transform: uppercase; }
+    .badge-pending { background: #fef7e0; color: #b06000; }
+    .badge-approved { background: #e6f4ea; color: #137333; }
+    .badge-rejected { background: #fce8e6; color: #c5221f; }
+  </style>
 </head>
 <body>
 
-<h1>Xindus Admin — Request Summary & Aging</h1>
+  <h1>Admin Approval Tracking Dashboard</h1>
 
-<div class="stats-container">
-  <div class="card">
-    <h3>Total Forms Submitted</h3>
-    <p id="totalCount" style="color: #188038;">0</p>
+  <div class="controls">
+    <select id="statusFilter">
+      <option value="ALL">All Status</option>
+      <option value="Pending">Pending</option>
+      <option value="Approved">Approved</option>
+      <option value="Rejected">Rejected</option>
+    </select>
+    <button onclick="loadRequests()" style="padding: 8px 16px; background:#188038; color:white; border:none; border-radius:4px; cursor:pointer;">Refresh</button>
   </div>
-  <div class="card pending-card">
-    <h3>Pending Approvals</h3>
-    <p id="pendingCount" style="color: #e67e22;">0</p>
-  </div>
-</div>
 
-<div class="table-container">
   <table>
     <thead>
       <tr>
-        <th>Customer Name</th>
+        <th>Request ID</th>
         <th>Approval Type</th>
-        <th>Approver Name</th>
+        <th>Approver Email</th>
         <th>Status</th>
+        <th>Remarks</th>
         <th>Submitted Date</th>
-        <th>Aging (Pending Days)</th>
       </tr>
     </thead>
-    <tbody id="tableBody">
-      <tr><td colspan="6" style="text-align: center;">Loading data...</td></tr>
+    <tbody id="requestsTable">
+      <tr><td colspan="6">Loading requests...</td></tr>
     </tbody>
   </table>
-</div>
 
 <script>
   const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function loadDashboard() {
-    const { data, error } = await supabaseClient
-      .from("approval_requests")
-      .select("*")
-      .order("created_at", { ascending: false });
+  async function loadRequests() {
+    const tbody = document.getElementById("requestsTable");
+    const filter = document.getElementById("statusFilter").value;
+    tbody.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
 
-    if (error) {
-      document.getElementById("tableBody").innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">Error loading records</td></tr>`;
-      return;
+    let query = supabaseClient.from("approval_requests").select("*").order("created_at", { ascending: false });
+    if (filter !== "ALL") {
+      query = query.eq("status", filter);
     }
 
-    document.getElementById("totalCount").innerText = data.length;
-    
-    // Calculate pending items
-    const pendingItems = data.filter(d => !d.status || d.status.toLowerCase().includes('pending'));
-    document.getElementById("pendingCount").innerText = pendingItems.length;
+    const { data, error } = await query;
+
+    if (error || !data) {
+      tbody.innerHTML = `<tr><td colspan='6' style='color:red;'>Error loading data: ${error?.message}</td></tr>`;
+      return;
+    }
 
     if (data.length === 0) {
-      document.getElementById("tableBody").innerHTML = `<tr><td colspan="6" style="text-align:center;">No approval requests found.</td></tr>`;
+      tbody.innerHTML = "<tr><td colspan='6'>No requests found.</td></tr>";
       return;
     }
 
-    let html = "";
-    data.forEach(row => {
-      const created = new Date(row.created_at);
-      const today = new Date();
-      const diffTime = Math.abs(today - created);
-      const agingDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
-      const reqData = row.request_data || {};
-      const customer = reqData.customer_name || reqData.customer_id_name || "N/A";
-      const status = row.status || "Pending";
-
-      let badgeClass = "badge-pending";
-      if (status.toLowerCase().includes("approve")) badgeClass = "badge-approved";
-      if (status.toLowerCase().includes("reject")) badgeClass = "badge-rejected";
-
-      html += `<tr>
-        <td><b>${customer}</b></td>
-        <td>${row.approval_type}</td>
-        <td>${row.approver_name || 'Approver'}</td>
-        <td><span class="status-badge ${badgeClass}">${status}</span></td>
-        <td>${created.toLocaleDateString()}</td>
-        <td>${status.toLowerCase().includes('pending') ? `<span class="aging-badge">${agingDays} Days</span>` : '-'}</td>
-      </tr>`;
-    });
-
-    document.getElementById("tableBody").innerHTML = html;
+    tbody.innerHTML = data.map(req => `
+      <tr>
+        <td><strong>#${req.id.slice(0, 8)}</strong></td>
+        <td>${req.approval_type || '-'}</td>
+        <td>${req.approver_email || '-'}</td>
+        <td><span class="badge badge-${(req.status || 'pending').toLowerCase()}">${req.status || 'Pending'}</span></td>
+        <td>${req.remarks || '-'}</td>
+        <td>${new Date(req.created_at).toLocaleString()}</td>
+      </tr>
+    `).join('');
   }
 
-  loadDashboard();
+  document.getElementById("statusFilter").addEventListener("change", loadRequests);
+  loadRequests();
 </script>
 
 </body>
