@@ -240,19 +240,22 @@
       <div class="card">
         <h2>2. Approval Requests Tracking & Operations</h2>
         
-        <!-- Multi-Column Filter Bar -->
+        <!-- Multi-Column Filter Bar with Dynamic Search Datalists -->
         <div class="filter-grid">
           <div>
             <label>Search Customer</label>
-            <input type="text" id="filterCust" oninput="applyFilters()" placeholder="Filter by customer...">
+            <input type="text" id="filterCust" list="custList" oninput="applyFilters()" placeholder="Type / Select Customer...">
+            <datalist id="custList"></datalist>
           </div>
           <div>
             <label>Filter Approval Type</label>
-            <input type="text" id="filterType" oninput="applyFilters()" placeholder="Filter type...">
+            <input type="text" id="filterType" list="typeList" oninput="applyFilters()" placeholder="Type / Select Approval Type...">
+            <datalist id="typeList"></datalist>
           </div>
           <div>
             <label>Filter Approver</label>
-            <input type="text" id="filterApprover" oninput="applyFilters()" placeholder="Filter email...">
+            <input type="text" id="filterApprover" list="approverList" oninput="applyFilters()" placeholder="Type / Select Approver Email...">
+            <datalist id="approverList"></datalist>
           </div>
           <div>
             <label>Filter Status</label>
@@ -269,17 +272,18 @@
           <table>
             <thead>
               <tr>
-                <th style="width:90px;">Request ID</th>
+                <th style="width:85px;">Request ID</th>
                 <th>Customer Name</th>
                 <th>Approval Type</th>
+                <th style="width:110px;">Amount (₹)</th>
                 <th>Approver Email</th>
                 <th style="width:80px;">Status</th>
-                <th style="width:140px;">Submitted Date</th>
-                <th style="width:110px;">Action</th>
+                <th style="width:130px;">Submitted Date</th>
+                <th style="width:125px;">Action</th>
               </tr>
             </thead>
             <tbody id="requestsTable">
-              <tr><td colspan="7">Loading tracking records...</td></tr>
+              <tr><td colspan="8">Loading tracking records...</td></tr>
             </tbody>
           </table>
         </div>
@@ -297,7 +301,7 @@
   let rawRequestsData = [];
   let currentUserEmail = "";
 
-  // Title Case Formatter: Capitalizes first letter of every word and word after '-'
+  // Title Case Formatter
   function formatApprovalType(str) {
     if (!str) return '-';
     return str
@@ -499,19 +503,37 @@
     else loadMatrix();
   }
 
-  /* Request Tracking & Filtering Functions */
+  /* Request Tracking, Dynamic Datalist & Reminder Email Functions */
   async function loadRequests() {
     const tbody = document.getElementById("requestsTable");
-    tbody.innerHTML = "<tr><td colspan='7'>Loading requests...</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='8'>Loading requests...</td></tr>";
 
     const { data, error } = await supabaseClient.from("approval_requests").select("*").order("created_at", { ascending: false });
     if (error || !data) {
-      tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Error loading tracking records: ${error?.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan='8' style='color:red;'>Error loading tracking records: ${error?.message}</td></tr>`;
       return;
     }
 
     rawRequestsData = data;
+    populateFilterDatalists(data);
     applyFilters();
+  }
+
+  function populateFilterDatalists(data) {
+    const custSet = new Set();
+    const typeSet = new Set();
+    const approverSet = new Set();
+
+    data.forEach(req => {
+      const cust = req.customer_name || req.company_name || req.client_name;
+      if (cust) custSet.add(cust);
+      if (req.approval_type) typeSet.add(formatApprovalType(req.approval_type));
+      if (req.approver_email) approverSet.add(req.approver_email);
+    });
+
+    document.getElementById("custList").innerHTML = Array.from(custSet).map(c => `<option value="${c}">`).join('');
+    document.getElementById("typeList").innerHTML = Array.from(typeSet).map(t => `<option value="${t}">`).join('');
+    document.getElementById("approverList").innerHTML = Array.from(approverSet).map(a => `<option value="${a}">`).join('');
   }
 
   function applyFilters() {
@@ -522,7 +544,7 @@
 
     const filtered = rawRequestsData.filter(req => {
       const custName = (req.customer_name || req.company_name || req.client_name || '').toLowerCase();
-      const appType = (req.approval_type || '').toLowerCase();
+      const appType = formatApprovalType(req.approval_type).toLowerCase();
       const appEmail = (req.approver_email || '').toLowerCase();
       const reqStatus = req.status || 'Pending';
 
@@ -540,19 +562,22 @@
   function renderRequestsTable(data) {
     const tbody = document.getElementById("requestsTable");
     if (data.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='7'>No matching records found.</td></tr>";
+      tbody.innerHTML = "<tr><td colspan='8'>No matching records found.</td></tr>";
       return;
     }
 
     tbody.innerHTML = data.map(req => {
       const isPending = (req.status || 'Pending').toLowerCase() === 'pending';
       const custName = req.customer_name || req.company_name || req.client_name || '-';
-      
+      const amountVal = req.credit_limit || req.amount || req.limit_amount || 0;
+      const formattedAmount = amountVal ? `₹${Number(amountVal).toLocaleString('en-IN')}` : '-';
+
       return `
         <tr>
           <td><strong>#${req.id.slice(0, 8)}</strong></td>
           <td><strong>${custName}</strong></td>
           <td>${formatApprovalType(req.approval_type)}</td>
+          <td><strong>${formattedAmount}</strong></td>
           <td>${req.approver_email || '-'}</td>
           <td><span class="badge badge-${(req.status || 'pending').toLowerCase()}">${req.status || 'Pending'}</span></td>
           <td>${new Date(req.created_at).toLocaleString()}</td>
@@ -565,25 +590,40 @@
   }
 
   async function sendReminder(reqId, approverEmail) {
-    if (!confirm(`Are you sure you want to send a reminder notification to ${approverEmail}?`)) return;
+    if (!confirm(`Are you sure you want to send a REMINDER EMAIL to ${approverEmail}?`)) return;
 
     try {
-      const response = await fetch(`${SUPABASE_URL}/functions/v1/send-approval-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-        },
-        body: JSON.stringify({ requestId: reqId, isReminder: true })
+      // Direct Edge Function trigger with reminder subject flag
+      const { data, error } = await supabaseClient.functions.invoke('send-approval-email', {
+        body: { 
+          requestId: reqId, 
+          isReminder: true,
+          subjectPrefix: "REMINDER: "
+        }
       });
 
-      if (response.ok) {
-        alert(`Reminder notification dispatched to ${approverEmail}.`);
+      if (error) {
+        // Fallback HTTP POST Trigger if Supabase Client invoke misses edge route
+        const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-approval-email`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ requestId: reqId, isReminder: true, subjectPrefix: "REMINDER: " })
+        });
+        
+        if (resp.ok) {
+          alert(`✅ REMINDER EMAIL successfully sent to ${approverEmail}!`);
+        } else {
+          const errTxt = await resp.text();
+          alert(`⚠️ Could not deliver reminder email: ${errTxt || 'Edge Function execution error'}`);
+        }
       } else {
-        alert("Reminder command dispatched.");
+        alert(`✅ REMINDER EMAIL successfully dispatched to ${approverEmail}!`);
       }
     } catch (err) {
-      alert("Reminder command dispatched.");
+      alert(`⚠️ Exception sending email: ${err.message}`);
     }
   }
 
