@@ -22,8 +22,9 @@
     .badge-approved { background: #e6f4ea; color: #137333; }
     .badge-rejected { background: #fce8e6; color: #c5221f; }
 
-    .matrix-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
-    .matrix-form input, .matrix-form select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
+    .form-grid input, .form-grid select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+    
     .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
     .btn-primary { background: #188038; color: white; }
     .btn-warning { background: #f2994a; color: white; }
@@ -32,7 +33,7 @@
     
     /* Login Modal Overlay */
     #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-    .auth-box { background: white; padding: 35px; border-radius: 8px; text-align: center; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+    .auth-box { background: white; padding: 35px; border-radius: 8px; text-align: center; width: 340px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
     .google-btn { background: #4285F4; color: white; padding: 12px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; }
   </style>
 </head>
@@ -42,7 +43,7 @@
   <div id="authOverlay" style="display: flex;">
     <div class="auth-box">
       <h3 style="margin-top:0; color:#188038;">Xindus Admin Login</h3>
-      <p style="font-size:13px; color:#666; margin-bottom: 20px;">Please login with your official <strong>@xindus.net</strong> email</p>
+      <p style="font-size:13px; color:#666; margin-bottom: 20px;">Login with authorized email</p>
       <button onclick="loginWithGoogle()" class="google-btn">
         Login with Google
       </button>
@@ -53,7 +54,7 @@
   <!-- Main Dashboard Content (Hidden Default) -->
   <div id="mainDashboard" style="display:none;">
     <header>
-      <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Approval Management</div>
+      <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Portal</div>
       <div style="display:flex; gap:10px; align-items:center;">
         <span id="userEmailSpan" style="font-size:12px; opacity:0.9;"></span>
         <button onclick="refreshAll()" class="btn btn-primary" style="background:#0d5e27;">Refresh Data</button>
@@ -63,11 +64,35 @@
 
     <div class="container">
 
+      <!-- Section 0: Admin Access Manager (Grant/Revoke Access) -->
+      <div class="card" style="border: 1px solid #188038; background: #f4faf6;">
+        <h2 style="color: #0d5e27;">🔐 Admin Access Manager (Grant Access To Users)</h2>
+        <p style="font-size: 12px; color: #555;">Kisaan / Employee ko Admin Access dene ke liye unka official email yahan add karein. Unke paas bhi doosron ko access dene ka option hoga.</p>
+        
+        <form onsubmit="handleAddAdmin(event)" style="display:flex; gap:10px; margin-bottom:15px;">
+          <input type="email" id="newAdminEmail" placeholder="user@xindus.net" required style="padding:8px; border:1px solid #ccc; border-radius:4px; flex:1;">
+          <button type="submit" class="btn btn-primary">+ Grant Access</button>
+        </form>
+
+        <table style="background: white;">
+          <thead>
+            <tr>
+              <th>Authorized Admin Email</th>
+              <th>Added Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="allowedAdminsTable">
+            <tr><td colspan="3">Loading allowed admins...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
       <!-- Section 1: Dynamic Approval Matrix Rules Manager -->
       <div class="card">
         <h2>1. Dynamic Approval Matrix Rules Manager</h2>
         
-        <form id="addMatrixForm" onsubmit="handleMatrixSubmit(event)" class="matrix-form">
+        <form id="addMatrixForm" onsubmit="handleMatrixSubmit(event)" class="form-grid">
           <input type="hidden" id="m_edit_id" value="">
           <div>
             <label style="font-size:11px; font-weight:bold;">Approval Type</label>
@@ -160,6 +185,7 @@
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let matrixCache = [];
+  let currentUserEmail = "";
 
   async function loginWithGoogle() {
     const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -170,21 +196,24 @@
   }
 
   async function checkSession() {
-    // Strictly Keep Hidden initially
     document.getElementById("mainDashboard").style.display = "none";
     document.getElementById("authOverlay").style.display = "flex";
 
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
-      const email = session.user.email;
-      if (email && email.toLowerCase().endsWith("@xindus.net")) {
+      currentUserEmail = session.user.email ? session.user.email.toLowerCase().trim() : "";
+      
+      // Check in Supabase Allowed Admins Table
+      const { data: adminList, error } = await supabaseClient.from("allowed_admins").select("email").eq("email", currentUserEmail);
+
+      if (adminList && adminList.length > 0) {
         document.getElementById("authOverlay").style.display = "none";
         document.getElementById("mainDashboard").style.display = "block";
-        document.getElementById("userEmailSpan").innerText = email;
+        document.getElementById("userEmailSpan").innerText = currentUserEmail;
         refreshAll();
       } else {
         await supabaseClient.auth.signOut();
-        showError("Access Denied: Only @xindus.net email addresses are allowed.");
+        showError(`Access Denied: ${currentUserEmail} is not in the authorized admin list.`);
       }
     } else {
       document.getElementById("authOverlay").style.display = "flex";
@@ -203,50 +232,66 @@
     errBox.style.display = "block";
   }
 
-  async function loadRequests() {
-    const tbody = document.getElementById("requestsTable");
-    const filter = document.getElementById("statusFilter").value;
-    tbody.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
+  /* Admin Management Functions */
+  async function loadAllowedAdmins() {
+    const tbody = document.getElementById("allowedAdminsTable");
+    const { data, error } = await supabaseClient.from("allowed_admins").select("*").order("id", { ascending: true });
 
-    let query = supabaseClient.from("approval_requests").select("*").order("created_at", { ascending: false });
-    if (filter !== "ALL") query = query.eq("status", filter);
-
-    const { data, error } = await query;
     if (error || !data) {
-      tbody.innerHTML = `<tr><td colspan='6' style='color:red;'>Error loading data: ${error?.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan='3' style='color:red;'>Error: ${error?.message}</td></tr>`;
       return;
     }
 
-    if (data.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='6'>No requests found.</td></tr>";
-      return;
-    }
-
-    tbody.innerHTML = data.map(req => `
+    tbody.innerHTML = data.map(adm => `
       <tr>
-        <td><strong>#${req.id.slice(0, 8)}</strong></td>
-        <td>${req.approval_type || '-'}</td>
-        <td>${req.approver_email || '-'}</td>
-        <td><span class="badge badge-${(req.status || 'pending').toLowerCase()}">${req.status || 'Pending'}</span></td>
-        <td>${req.remarks || '-'}</td>
-        <td>${new Date(req.created_at).toLocaleString()}</td>
+        <td><strong>${adm.email}</strong></td>
+        <td>${new Date(adm.created_at).toLocaleDateString()}</td>
+        <td>
+          <button class="btn btn-danger" onclick="revokeAdminAccess(${adm.id}, '${adm.email}')">Revoke Access</button>
+        </td>
       </tr>
     `).join('');
   }
 
+  async function handleAddAdmin(e) {
+    e.preventDefault();
+    const emailInput = document.getElementById("newAdminEmail").value.toLowerCase().trim();
+    
+    const { error } = await supabaseClient.from("allowed_admins").insert([{ email: emailInput }]);
+    if (error) {
+      alert("Error adding admin: " + error.message);
+    } else {
+      document.getElementById("newAdminEmail").value = "";
+      alert(`Access granted to ${emailInput}`);
+      loadAllowedAdmins();
+    }
+  }
+
+  async function revokeAdminAccess(id, email) {
+    if (email === currentUserEmail) {
+      alert("You cannot revoke your own admin access!");
+      return;
+    }
+    if (!confirm(`Are you sure you want to revoke admin access for ${email}?`)) return;
+
+    const { error } = await supabaseClient.from("allowed_admins").delete().eq("id", id);
+    if (error) alert("Error revoking access: " + error.message);
+    else loadAllowedAdmins();
+  }
+
+  /* Matrix Functions */
   async function loadMatrix() {
     const tbody = document.getElementById("matrixTable");
     const { data, error } = await supabaseClient.from("approval_matrix").select("*").order("id", { ascending: true });
 
     if (error || !data) {
-      tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Error loading matrix: ${error?.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Error: ${error?.message}</td></tr>`;
       return;
     }
 
     matrixCache = data;
-
     if (data.length === 0) {
-      tbody.innerHTML = "<tr><td colspan='7'>No rules configured yet. Add your first rule above.</td></tr>";
+      tbody.innerHTML = "<tr><td colspan='7'>No rules configured yet.</td></tr>";
       return;
     }
 
@@ -281,8 +326,6 @@
     document.getElementById("submitBtn").innerText = "Update Rule";
     document.getElementById("submitBtn").style.background = "#f2994a";
     document.getElementById("cancelEditBtn").style.display = "inline-block";
-    
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function resetMatrixForm() {
@@ -305,19 +348,11 @@
       cc_emails: document.getElementById("m_cc").value.trim()
     };
 
-    let result;
-    if (editId) {
-      result = await supabaseClient.from("approval_matrix").update(row).eq("id", editId);
-    } else {
-      result = await supabaseClient.from("approval_matrix").insert([row]);
-    }
+    let result = editId ? await supabaseClient.from("approval_matrix").update(row).eq("id", editId)
+                        : await supabaseClient.from("approval_matrix").insert([row]);
 
-    if (result.error) {
-      alert("Error saving rule: " + result.error.message);
-    } else {
-      resetMatrixForm();
-      loadMatrix();
-    }
+    if (result.error) alert("Error saving rule: " + result.error.message);
+    else { resetMatrixForm(); loadMatrix(); }
   }
 
   async function deleteMatrixRow(id) {
@@ -327,9 +362,36 @@
     else loadMatrix();
   }
 
+  async function loadRequests() {
+    const tbody = document.getElementById("requestsTable");
+    const filter = document.getElementById("statusFilter").value;
+    tbody.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
+
+    let query = supabaseClient.from("approval_requests").select("*").order("created_at", { ascending: false });
+    if (filter !== "ALL") query = query.eq("status", filter);
+
+    const { data, error } = await query;
+    if (error || !data) {
+      tbody.innerHTML = `<tr><td colspan='6' style='color:red;'>Error loading data: ${error?.message}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(req => `
+      <tr>
+        <td><strong>#${req.id.slice(0, 8)}</strong></td>
+        <td>${req.approval_type || '-'}</td>
+        <td>${req.approver_email || '-'}</td>
+        <td><span class="badge badge-${(req.status || 'pending').toLowerCase()}">${req.status || 'Pending'}</span></td>
+        <td>${req.remarks || '-'}</td>
+        <td>${new Date(req.created_at).toLocaleString()}</td>
+      </tr>
+    `).join('');
+  }
+
   function refreshAll() {
-    loadRequests();
+    loadAllowedAdmins();
     loadMatrix();
+    loadRequests();
   }
 
   checkSession();
