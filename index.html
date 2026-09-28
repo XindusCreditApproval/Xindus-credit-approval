@@ -30,69 +30,23 @@
 
 <h1>Xindus — Approval Request</h1>
 
-<!-- ============================================================
-     EDIT THESE VALUES before publishing:
-     - SUPABASE_URL / SUPABASE_ANON_KEY: from Supabase project settings
-       (Settings → API). The anon key is safe to expose here — it can
-       ONLY insert rows, per the RLS policy in schema.sql.
-     - SEND_EMAIL_FUNCTION_URL: your deployed send-approval-email
-       Edge Function URL.
-
-     ------------------------------------------------------------
-     APPROVER ROUTING (amount-based, from the credit approval matrix):
-     There is no "Approver Email / Name / CC" field on the form any more.
-     They are looked up from the ROUTING table below using:
-       - the approval type, and
-       - an amount taken from the form (see getRoutingAmount()).
-     To change an approver / CC / add a tier: edit the ROUTING table.
-     If no tier matches (e.g. Insurer Rejection has no rows yet, or the
-     amount is above the top tier) the DEFAULT_APPROVER_EMAIL is used.
-     ============================================================ -->
 <script>
   const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
   const SEND_EMAIL_FUNCTION_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co/functions/v1/send-approval-email";
 
-  // Fallback when no tier matches.
   const DEFAULT_APPROVER_EMAIL = "vikas.p@xindus.net";
-
-  // Routing matrix. Tiers are checked from lowest to highest: the first
-  // tier whose "to" is >= the amount wins.  ("from" is for reference.)
-  const APPROVER = "vikas.p@xindus.net";
-  const CC = "roshan@xindus.net";
-  const ROUTING = {
-    "credit limit extension": [
-      { from: 0,      to: 100000, email: APPROVER, name: "",           cc: CC },
-      { from: 100001, to: 200000, email: APPROVER, name: "Shifty mam", cc: CC },
-      { from: 200001, to: 300000, email: APPROVER, name: "Mohit Sir",  cc: CC },
-      { from: 300001, to: 400000, email: APPROVER, name: "",           cc: CC },
-      { from: 400001, to: 500000, email: APPROVER, name: "",           cc: CC },
-      { from: 500001, to: 600000, email: APPROVER, name: "",           cc: CC },
-    ],
-    "temporary credit - insurer approval under process": [
-      { from: 0,      to: 100000, email: APPROVER, name: "Roshan Sir", cc: CC },
-      { from: 100001, to: 200000, email: APPROVER, name: "Shifty mam", cc: CC },
-      { from: 200001, to: 300000, email: APPROVER, name: "Mohit Sir",  cc: CC },
-      { from: 300001, to: 400000, email: APPROVER, name: "",           cc: CC },
-      { from: 400001, to: 500000, email: APPROVER, name: "",           cc: CC },
-      { from: 500001, to: 600000, email: APPROVER, name: "",           cc: CC },
-    ],
-    // No rows in the matrix yet -> uses DEFAULT_APPROVER_EMAIL.
-    "insurer rejection - credit limit exception": [],
-  };
 
   function toNumber(v) {
     const n = parseFloat(String(v || "").replace(/[^0-9.]/g, ""));
-    return isNaN(n) ? null : n;
+    return isNaN(n) ? 0 : n;
   }
 
-  // Which form field(s) decide the tier, per approval type.
   function getRoutingAmount(approvalType, d) {
     if (approvalType === "credit limit extension") {
       const cur = toNumber(d.current_credit_limit);
       const add = toNumber(d.additional_credit_requested);
-      if (cur === null || add === null) return null;
-      return cur + add; // total new limit
+      return cur + add;
     }
     if (approvalType === "temporary credit - insurer approval under process") {
       return toNumber(d.credit_limit_required);
@@ -100,13 +54,28 @@
     if (approvalType === "insurer rejection - credit limit exception") {
       return toNumber(d.credit_limit_requested);
     }
-    return null;
+    return 0;
   }
 
-  function resolveRouting(approvalType, amount) {
-    const tiers = ROUTING[approvalType] || [];
-    const tier = amount === null ? null : tiers.find(t => amount <= t.to);
-    return tier || { email: DEFAULT_APPROVER_EMAIL, name: "", cc: "" };
+  // Dynamic Lookup from Supabase `approval_matrix` Table
+  async function resolveRoutingFromDB(approvalType, amount) {
+    const { data: tiers, error } = await supabaseClient
+      .from("approval_matrix")
+      .select("*")
+      .eq("approval_type", approvalType)
+      .lte("limit_from", amount)
+      .gte("limit_to", amount);
+
+    if (error || !tiers || tiers.length === 0) {
+      return { email: DEFAULT_APPROVER_EMAIL, name: "Approver", cc: "" };
+    }
+
+    const matched = tiers[0];
+    return {
+      email: matched.approver_email,
+      name: matched.approver_name || "Approver",
+      cc: matched.cc_emails || ""
+    };
   }
 </script>
 
@@ -201,26 +170,21 @@
       requestData[el.dataset.field] = el.value.trim();
     });
 
-    const amount = getRoutingAmount(approvalType, requestData);
-    if ((ROUTING[approvalType] || []).length && amount === null) {
-      statusEl.textContent = "Please enter the credit amount(s) as plain numbers (e.g. 150000).";
-      statusEl.className = "error";
-      return;
-    }
-    const route = resolveRouting(approvalType, amount);
-
-    const payload = {
-      approval_type: approvalType,
-      approver_email: route.email,
-      approver_name: route.name || null,
-      cc_email: route.cc || null,
-      request_data: requestData,
-    };
-
     submitBtn.disabled = true;
-    statusEl.textContent = "Submitting...";
+    statusEl.textContent = "Checking routing & submitting...";
 
     try {
+      const amount = getRoutingAmount(approvalType, requestData);
+      const route = await resolveRoutingFromDB(approvalType, amount);
+
+      const payload = {
+        approval_type: approvalType,
+        approver_email: route.email,
+        approver_name: route.name || null,
+        cc_email: route.cc || null,
+        request_data: requestData,
+      };
+
       const { data, error } = await supabaseClient
         .from("approval_requests")
         .insert(payload)
@@ -229,7 +193,6 @@
 
       if (error) throw error;
 
-      // Fire the email-sending function; don't block the success message on it.
       fetch(SEND_EMAIL_FUNCTION_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
