@@ -31,15 +31,15 @@
     .btn-secondary { background: #6c757d; color: white; }
     
     /* Login Modal Overlay */
-    #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+    #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; }
     .auth-box { background: white; padding: 35px; border-radius: 8px; text-align: center; width: 320px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .google-btn { background: #4285F4; color: white; padding: 10px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .google-btn { background: #4285F4; color: white; padding: 12px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; }
   </style>
 </head>
 <body>
 
-  <!-- Google Authentication Modal -->
-  <div id="authOverlay">
+  <!-- Google Authentication Modal (Locked Default) -->
+  <div id="authOverlay" style="display: flex;">
     <div class="auth-box">
       <h3 style="margin-top:0; color:#188038;">Xindus Admin Login</h3>
       <p style="font-size:13px; color:#666; margin-bottom: 20px;">Please login with your official <strong>@xindus.net</strong> email</p>
@@ -50,6 +50,7 @@
     </div>
   </div>
 
+  <!-- Main Dashboard Content (Hidden Default) -->
   <div id="mainDashboard" style="display:none;">
     <header>
       <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Approval Management</div>
@@ -169,10 +170,14 @@
   }
 
   async function checkSession() {
+    // Strictly Keep Hidden initially
+    document.getElementById("mainDashboard").style.display = "none";
+    document.getElementById("authOverlay").style.display = "flex";
+
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (session && session.user) {
       const email = session.user.email;
-      if (email.endsWith("@xindus.net")) {
+      if (email && email.toLowerCase().endsWith("@xindus.net")) {
         document.getElementById("authOverlay").style.display = "none";
         document.getElementById("mainDashboard").style.display = "block";
         document.getElementById("userEmailSpan").innerText = email;
