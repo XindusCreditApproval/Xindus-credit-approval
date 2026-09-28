@@ -7,20 +7,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
   body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f4f6f8; }
-  .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
+  .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 420px; width: 100%; }
   h2 { margin-top: 0; color: #333; }
-  p { font-size: 16px; color: #666; margin-bottom: 20px; }
-  .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #188038; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+  p { font-size: 15px; color: #666; margin-bottom: 20px; line-height: 1.5; }
+  .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #188038; border-radius: 50%; width: 32px; height: 32px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
   @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-  .success { color: #188038; font-weight: bold; font-size: 18px; }
-  .error { color: #d93025; font-weight: bold; font-size: 18px; }
+  .error { color: #d93025; font-size: 18px; font-weight: bold; }
+  .success { color: #188038; font-size: 18px; font-weight: bold; }
 </style>
 </head>
 <body>
 
 <div class="card" id="cardContent">
   <div class="spinner"></div>
-  <p>Processing your response, please wait...</p>
+  <p>Processing approval response, please wait...</p>
 </div>
 
 <script>
@@ -35,11 +35,11 @@
     const token = urlParams.get('token');
 
     if (!action || !token) {
-      card.innerHTML = `<h2 class="error">Invalid Request</h2><p>Invalid or missing approval link parameters.</p>`;
+      card.innerHTML = `<h2 class="error">Invalid Approval Link</h2><p>This link is missing required action parameters. Please click directly from the official request email.</p>`;
       return;
     }
 
-    // Fetch token details
+    // Query approval_requests by token
     const { data: request, error: fetchError } = await supabaseClient
       .from('approval_requests')
       .select('*')
@@ -47,12 +47,12 @@
       .maybeSingle();
 
     if (fetchError || !request) {
-      card.innerHTML = `<h2 class="error">Invalid approval link.</h2><p>This token is either invalid or expired.</p>`;
+      card.innerHTML = `<h2 class="error">Token Not Found</h2><p>This approval link is invalid or has expired.</p>`;
       return;
     }
 
     if (request.status && request.status !== 'Pending') {
-      card.innerHTML = `<h2>Already Actioned</h2><p>This request has already been marked as <b>${request.status}</b>.</p>`;
+      card.innerHTML = `<h2>Already Processed</h2><p>This request has already been marked as <b>${request.status}</b>.</p>`;
       return;
     }
 
@@ -67,10 +67,10 @@
       .eq('approval_token', token);
 
     if (updateError) {
-      card.innerHTML = `<h2 class="error">Error</h2><p>Could not update request status. Please try again.</p>`;
+      card.innerHTML = `<h2 class="error">Update Failed</h2><p>Unable to save response. Please try again or contact support.</p>`;
     } else {
       const color = newStatus === 'Approved' ? '#188038' : '#d93025';
-      card.innerHTML = `<h2 style="color:${color}">Request ${newStatus}!</h2><p>Thank you for your response. The request status has been updated to <b>${newStatus}</b>.</p>`;
+      card.innerHTML = `<h2 style="color:${color}">Request ${newStatus}!</h2><p>Your response has been saved. The status is now updated to <b>${newStatus}</b>.</p>`;
     }
   }
 
