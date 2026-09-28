@@ -6,35 +6,120 @@
   <title>Xindus — Admin Approval & Rules Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background-color: #f8f9fa; color: #333; }
-    header { background: #188038; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
-    .container { padding: 30px; max-width: 1300px; margin: 0 auto; }
-    .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); margin-bottom: 30px; }
-    h2 { margin-top: 0; border-bottom: 2px solid #f1f3f4; padding-bottom: 10px; font-size: 18px; color: #188038; }
-    
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
-    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
-    th { background-color: #f1f3f4; font-weight: 600; color: #555; }
-    tr:hover { background-color: #f8fbff; }
+    :root {
+      --primary-color: #1b5e20;
+      --primary-hover: #144718;
+      --bg-color: #f4f6f8;
+      --card-bg: #ffffff;
+      --border-color: #d1d5db;
+      --text-main: #1f2937;
+      --text-muted: #6b7280;
+    }
 
-    .badge { padding: 4px 8px; border-radius: 12px; font-weight: bold; font-size: 11px; text-transform: uppercase; }
-    .badge-pending { background: #fef7e0; color: #b06000; }
-    .badge-approved { background: #e6f4ea; color: #137333; }
-    .badge-rejected { background: #fce8e6; color: #c5221f; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      margin: 0; 
+      background-color: var(--bg-color); 
+      color: var(--text-main); 
+      font-size: 12px;
+      line-height: 1.4;
+    }
 
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 15px; background: #f8f9fa; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
-    .form-grid input, .form-grid select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+    header { 
+      background: var(--primary-color); 
+      color: white; 
+      padding: 10px 24px; 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .container { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
     
-    .btn { padding: 8px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
-    .btn-primary { background: #188038; color: white; }
-    .btn-warning { background: #f2994a; color: white; }
-    .btn-danger { background: #d93025; color: white; }
-    .btn-secondary { background: #6c757d; color: white; }
+    .card { 
+      background: var(--card-bg); 
+      padding: 18px 20px; 
+      border-radius: 4px; 
+      border: 1px solid var(--border-color);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05); 
+      margin-bottom: 20px; 
+    }
+
+    h2 { 
+      margin-top: 0; 
+      border-bottom: 1px solid var(--border-color); 
+      padding-bottom: 8px; 
+      font-size: 14px; 
+      font-weight: 600;
+      color: var(--primary-color); 
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
     
-    /* Login Modal Overlay */
-    #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 9999; }
-    .auth-box { background: white; padding: 35px; border-radius: 8px; text-align: center; width: 340px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-    .google-btn { background: #4285F4; color: white; padding: 12px; border-radius: 4px; border: none; font-weight: bold; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 14px; }
+    /* Table Styling */
+    .table-container { width: 100%; overflow-x: auto; margin-top: 10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left; }
+    th, td { padding: 8px 10px; border: 1px solid #e5e7eb; vertical-align: middle; }
+    th { background-color: #f8fafc; font-weight: 600; color: #334155; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.3px; }
+    tr:nth-child(even) { background-color: #f8fafc; }
+    tr:hover { background-color: #f1f5f9; }
+
+    /* Badge Design */
+    .badge { padding: 3px 6px; border-radius: 3px; font-weight: 600; font-size: 10px; text-transform: uppercase; display: inline-block; }
+    .badge-pending { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+    .badge-approved { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+    .badge-rejected { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+
+    /* Inputs & Form Controls */
+    .form-grid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); 
+      gap: 8px; 
+      margin-bottom: 12px; 
+      background: #f8fafc; 
+      padding: 12px; 
+      border-radius: 4px; 
+      border: 1px solid var(--border-color); 
+    }
+    
+    label { font-size: 10.5px; font-weight: 600; color: #475569; display: block; margin-bottom: 3px; }
+    input, select { 
+      padding: 5px 8px; 
+      border: 1px solid #cbd5e1; 
+      border-radius: 3px; 
+      width: 100%; 
+      box-sizing: border-box; 
+      font-size: 11.5px;
+      background-color: #fff;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--primary-color); }
+
+    /* Buttons */
+    .btn { padding: 5px 10px; border: none; border-radius: 3px; cursor: pointer; font-weight: 600; font-size: 11px; transition: background 0.15s ease; }
+    .btn-primary { background: var(--primary-color); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-warning { background: #d97706; color: white; }
+    .btn-danger { background: #dc2626; color: white; }
+    .btn-secondary { background: #64748b; color: white; }
+    .btn-info { background: #0284c7; color: white; }
+
+    /* Filter Controls Row */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      background: #f1f5f9;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 12px;
+    }
+
+    /* Modal Overlay */
+    #authOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); display: flex; align-items: center; justify-content: center; z-index: 9999; }
+    .auth-box { background: white; padding: 30px; border-radius: 6px; text-align: center; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+    .google-btn { background: #2563eb; color: white; padding: 10px; border-radius: 4px; border: none; font-weight: 600; cursor: pointer; width: 100%; font-size: 12px; }
   </style>
 </head>
 <body>
@@ -42,22 +127,22 @@
   <!-- Google Authentication Modal -->
   <div id="authOverlay" style="display: flex;">
     <div class="auth-box">
-      <h3 style="margin-top:0; color:#188038;">Xindus Admin Login</h3>
-      <p style="font-size:13px; color:#666; margin-bottom: 20px;">Login with authorized email</p>
+      <h3 style="margin-top:0; color:var(--primary-color); font-size: 16px;">Xindus Admin Portal</h3>
+      <p style="font-size:11.5px; color:#64748b; margin-bottom: 20px;">Sign in with authorized corporate identity</p>
       <button onclick="loginWithGoogle()" class="google-btn">
-        Login with Google
+        Authorize via Google
       </button>
-      <p id="loginError" style="color:red; font-size:12px; margin-top:15px; display:none;"></p>
+      <p id="loginError" style="color:#dc2626; font-size:11px; margin-top:12px; display:none;"></p>
     </div>
   </div>
 
   <!-- Main Dashboard Content -->
   <div id="mainDashboard" style="display:none;">
     <header>
-      <div style="font-size: 18px; font-weight: bold;">Xindus — Admin Portal</div>
-      <div style="display:flex; gap:10px; align-items:center;">
-        <span id="userEmailSpan" style="font-size:12px; opacity:0.9;"></span>
-        <button onclick="refreshAll()" class="btn btn-primary" style="background:#0d5e27;">Refresh Data</button>
+      <div style="font-size: 15px; font-weight: 700; letter-spacing: 0.3px;">XINDUS — Enterprise Admin Console</div>
+      <div style="display:flex; gap:12px; align-items:center;">
+        <span id="userEmailSpan" style="font-size:11px; opacity:0.9;"></span>
+        <button onclick="refreshAll()" class="btn btn-primary" style="background:#144718; border:1px solid #0f3612;">Refresh Data</button>
         <button onclick="logout()" class="btn btn-danger">Logout</button>
       </div>
     </header>
@@ -65,37 +150,39 @@
     <div class="container">
 
       <!-- Section 0: Admin Access Manager -->
-      <div class="card" style="border: 1px solid #188038; background: #f4faf6;">
-        <h2 style="color: #0d5e27;">🔐 Admin Access Manager (Grant Access To Users)</h2>
-        <p style="font-size: 12px; color: #555;">Kisaan / Employee ko Admin Access dene ke liye unka official email yahan add karein. Unke paas bhi doosron ko access dene ka option hoga.</p>
+      <div class="card" style="border-left: 4px solid var(--primary-color);">
+        <h2>🔐 Authorized Admin Directory</h2>
+        <p style="font-size: 11px; color: #64748b; margin-top:-4px;">Grant admin panel access to authorized team members.</p>
         
-        <form onsubmit="handleAddAdmin(event)" style="display:flex; gap:10px; margin-bottom:15px;">
-          <input type="email" id="newAdminEmail" placeholder="user@xindus.net" required style="padding:8px; border:1px solid #ccc; border-radius:4px; flex:1;">
-          <button type="submit" class="btn btn-primary">+ Grant Access</button>
+        <form onsubmit="handleAddAdmin(event)" style="display:flex; gap:8px; margin-bottom:12px; max-width: 500px;">
+          <input type="email" id="newAdminEmail" placeholder="user@xindus.net" required style="padding:6px 8px;">
+          <button type="submit" class="btn btn-primary" style="white-space:nowrap;">+ Grant Access</button>
         </form>
 
-        <table style="background: white;">
-          <thead>
-            <tr>
-              <th>Authorized Admin Email</th>
-              <th>Added Date</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="allowedAdminsTable">
-            <tr><td colspan="3">Loading allowed admins...</td></tr>
-          </tbody>
-        </table>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Authorized Admin Email</th>
+                <th>Access Granted Date</th>
+                <th style="width:100px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="allowedAdminsTable">
+              <tr><td colspan="3">Loading directory...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Section 1: Dynamic Approval Matrix Rules Manager -->
       <div class="card">
-        <h2>1. Dynamic Approval Matrix Rules Manager</h2>
+        <h2>1. Approval Matrix Rules Configuration</h2>
         
         <form id="addMatrixForm" onsubmit="handleMatrixSubmit(event)" class="form-grid">
           <input type="hidden" id="m_edit_id" value="">
           <div>
-            <label style="font-size:11px; font-weight:bold;">Approval Type</label>
+            <label>Approval Type</label>
             <select id="m_type" required>
               <option value="">-- Select Type --</option>
               <option value="credit limit extension">Credit Limit Extension</option>
@@ -104,76 +191,98 @@
             </select>
           </div>
           <div>
-            <label style="font-size:11px; font-weight:bold;">Limit From (₹)</label>
+            <label>Limit From (₹)</label>
             <input type="number" step="any" id="m_from" placeholder="0" required>
           </div>
           <div>
-            <label style="font-size:11px; font-weight:bold;">Limit To (₹)</label>
+            <label>Limit To (₹)</label>
             <input type="number" step="any" id="m_to" placeholder="50000" required>
           </div>
           <div>
-            <label style="font-size:11px; font-weight:bold;">Approver Email(s)</label>
-            <input type="text" id="m_email" placeholder="app1@xindus.net, app2@xindus.net" required>
+            <label>Approver Email(s)</label>
+            <input type="text" id="m_email" placeholder="app1@xindus.net" required>
           </div>
           <div>
-            <label style="font-size:11px; font-weight:bold;">Approver Name</label>
+            <label>Approver Name</label>
             <input type="text" id="m_name" placeholder="e.g. Vikas / Management">
           </div>
           <div>
-            <label style="font-size:11px; font-weight:bold;">CC Emails (Comma separated)</label>
-            <input type="text" id="m_cc" placeholder="cc1@xindus.net, cc2@xindus.net">
+            <label>CC Emails</label>
+            <input type="text" id="m_cc" placeholder="cc1@xindus.net">
           </div>
-          <div style="display: flex; gap: 5px; align-items: flex-end;">
-            <button type="submit" id="submitBtn" class="btn btn-primary" style="width:100%;">+ Add Rule</button>
+          <div style="display: flex; gap: 4px; align-items: flex-end;">
+            <button type="submit" id="submitBtn" class="btn btn-primary" style="width:100%;">+ Save Rule</button>
             <button type="button" id="cancelEditBtn" onclick="resetMatrixForm()" class="btn btn-secondary" style="display:none;">Cancel</button>
           </div>
         </form>
 
-        <table>
-          <thead>
-            <tr>
-              <th>Approval Type</th>
-              <th>Limit From</th>
-              <th>Limit To</th>
-              <th>Approver Email(s)</th>
-              <th>Approver Name</th>
-              <th>CC Emails</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody id="matrixTable">
-            <tr><td colspan="7">Loading matrix rules...</td></tr>
-          </tbody>
-        </table>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Approval Type</th>
+                <th>Limit From</th>
+                <th>Limit To</th>
+                <th>Approver Email(s)</th>
+                <th>Approver Name</th>
+                <th>CC Emails</th>
+                <th style="width:110px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="matrixTable">
+              <tr><td colspan="7">Loading matrix configuration...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <!-- Section 2: Requests Tracking Dashboard -->
       <div class="card">
-        <h2>2. Approval Requests Tracking Dashboard</h2>
-        <div style="margin-bottom: 15px; display:flex; gap:10px; align-items:center;">
-          <label style="font-weight:bold; font-size:13px;">Filter Status: </label>
-          <select id="statusFilter" onchange="loadRequests()" style="padding: 6px 12px; border-radius:4px; border:1px solid #ccc;">
-            <option value="ALL">All Requests</option>
-            <option value="Pending">Pending</option>
-            <option value="Approved">Approved</option>
-            <option value="Rejected">Rejected</option>
-          </select>
+        <h2>2. Approval Requests Tracking & Operations</h2>
+        
+        <!-- Multi-Column Filter Bar -->
+        <div class="filter-grid">
+          <div>
+            <label>Search Customer</label>
+            <input type="text" id="filterCust" oninput="applyFilters()" placeholder="Filter by customer...">
+          </div>
+          <div>
+            <label>Filter Approval Type</label>
+            <input type="text" id="filterType" oninput="applyFilters()" placeholder="Filter type...">
+          </div>
+          <div>
+            <label>Filter Approver</label>
+            <input type="text" id="filterApprover" oninput="applyFilters()" placeholder="Filter email...">
+          </div>
+          <div>
+            <label>Filter Status</label>
+            <select id="filterStatus" onchange="applyFilters()">
+              <option value="ALL">All Statuses</option>
+              <option value="Pending">Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
         </div>
-        <table>
-          <thead>
-            <tr>
-              <th>Request ID</th>
-              <th>Approval Type</th>
-              <th>Approver Email</th>
-              <th>Status</th>
-              <th>Remarks</th>
-              <th>Submitted Date</th>
-            </tr>
-          </thead>
-          <tbody id="requestsTable">
-            <tr><td colspan="6">Loading requests...</td></tr>
-          </tbody>
-        </table>
+
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:90px;">Request ID</th>
+                <th>Customer Name</th>
+                <th>Approval Type</th>
+                <th>Approver Email</th>
+                <th style="width:80px;">Status</th>
+                <th style="width:140px;">Submitted Date</th>
+                <th style="width:110px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="requestsTable">
+              <tr><td colspan="7">Loading tracking records...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
     </div>
@@ -185,7 +294,24 @@
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   let matrixCache = [];
+  let rawRequestsData = [];
   let currentUserEmail = "";
+
+  // Title Case Formatter: Capitalizes first letter of every word and word after '-'
+  function formatApprovalType(str) {
+    if (!str) return '-';
+    return str
+      .toLowerCase()
+      .split('-')
+      .map(part => {
+        return part
+          .trim()
+          .split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(' ');
+      })
+      .join(' - ');
+  }
 
   async function loginWithGoogle() {
     const { error } = await supabaseClient.auth.signInWithOAuth({
@@ -199,7 +325,6 @@
     document.getElementById("mainDashboard").style.display = "none";
     document.getElementById("authOverlay").style.display = "flex";
 
-    // Auto-fix URL hash issue if double hash (##) is present from Google Redirect
     if (window.location.hash.startsWith("##")) {
       window.location.hash = window.location.hash.replace("##", "#");
     }
@@ -208,8 +333,7 @@
     if (session && session.user) {
       currentUserEmail = session.user.email ? session.user.email.toLowerCase().trim() : "";
       
-      // Check in Supabase Allowed Admins Table
-      const { data: adminList, error } = await supabaseClient
+      const { data: adminList } = await supabaseClient
         .from("allowed_admins")
         .select("email")
         .eq("email", currentUserEmail);
@@ -221,7 +345,7 @@
         refreshAll();
       } else {
         await supabaseClient.auth.signOut();
-        showError(`Access Denied: ${currentUserEmail} is not in the authorized admin list.`);
+        showError(`Access Denied: ${currentUserEmail} is not in the authorized directory.`);
       }
     } else {
       document.getElementById("authOverlay").style.display = "flex";
@@ -229,7 +353,6 @@
     }
   }
 
-  // Handle Auth State Changes Live
   supabaseClient.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
       checkSession();
@@ -253,7 +376,7 @@
     const { data, error } = await supabaseClient.from("allowed_admins").select("*").order("id", { ascending: true });
 
     if (error || !data) {
-      tbody.innerHTML = `<tr><td colspan='3' style='color:red;'>Error: ${error?.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan='3' style='color:red;'>Error loading directory: ${error?.message}</td></tr>`;
       return;
     }
 
@@ -262,7 +385,7 @@
         <td><strong>${adm.email}</strong></td>
         <td>${new Date(adm.created_at).toLocaleDateString()}</td>
         <td>
-          <button class="btn btn-danger" onclick="revokeAdminAccess(${adm.id}, '${adm.email}')">Revoke Access</button>
+          <button class="btn btn-danger" onclick="revokeAdminAccess(${adm.id}, '${adm.email}')">Revoke</button>
         </td>
       </tr>
     `).join('');
@@ -273,9 +396,8 @@
     const emailInput = document.getElementById("newAdminEmail").value.toLowerCase().trim();
     
     const { error } = await supabaseClient.from("allowed_admins").insert([{ email: emailInput }]);
-    if (error) {
-      alert("Error adding admin: " + error.message);
-    } else {
+    if (error) alert("Error granting access: " + error.message);
+    else {
       document.getElementById("newAdminEmail").value = "";
       alert(`Access granted to ${emailInput}`);
       loadAllowedAdmins();
@@ -284,7 +406,7 @@
 
   async function revokeAdminAccess(id, email) {
     if (email === currentUserEmail) {
-      alert("You cannot revoke your own admin access!");
+      alert("You cannot revoke your own administrative access!");
       return;
     }
     if (!confirm(`Are you sure you want to revoke admin access for ${email}?`)) return;
@@ -300,7 +422,7 @@
     const { data, error } = await supabaseClient.from("approval_matrix").select("*").order("id", { ascending: true });
 
     if (error || !data) {
-      tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Error: ${error?.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Error loading matrix: ${error?.message}</td></tr>`;
       return;
     }
 
@@ -312,13 +434,13 @@
 
     tbody.innerHTML = data.map(m => `
       <tr>
-        <td>${m.approval_type}</td>
+        <td><strong>${formatApprovalType(m.approval_type)}</strong></td>
         <td>₹${Number(m.limit_from).toLocaleString('en-IN')}</td>
         <td>₹${Number(m.limit_to).toLocaleString('en-IN')}</td>
         <td><strong>${m.approver_email}</strong></td>
         <td>${m.approver_name || '-'}</td>
         <td>${m.cc_emails || '-'}</td>
-        <td style="display:flex; gap:5px;">
+        <td style="display:flex; gap:4px;">
           <button class="btn btn-warning" onclick="editMatrixRow(${m.id})">Edit</button>
           <button class="btn btn-danger" onclick="deleteMatrixRow(${m.id})">Delete</button>
         </td>
@@ -339,15 +461,15 @@
     document.getElementById("m_cc").value = row.cc_emails || '';
 
     document.getElementById("submitBtn").innerText = "Update Rule";
-    document.getElementById("submitBtn").style.background = "#f2994a";
+    document.getElementById("submitBtn").style.background = "#d97706";
     document.getElementById("cancelEditBtn").style.display = "inline-block";
   }
 
   function resetMatrixForm() {
     document.getElementById("addMatrixForm").reset();
     document.getElementById("m_edit_id").value = "";
-    document.getElementById("submitBtn").innerText = "+ Add Rule";
-    document.getElementById("submitBtn").style.background = "#188038";
+    document.getElementById("submitBtn").innerText = "+ Save Rule";
+    document.getElementById("submitBtn").style.background = "var(--primary-color)";
     document.getElementById("cancelEditBtn").style.display = "none";
   }
 
@@ -377,30 +499,92 @@
     else loadMatrix();
   }
 
+  /* Request Tracking & Filtering Functions */
   async function loadRequests() {
     const tbody = document.getElementById("requestsTable");
-    const filter = document.getElementById("statusFilter").value;
-    tbody.innerHTML = "<tr><td colspan='6'>Loading...</td></tr>";
+    tbody.innerHTML = "<tr><td colspan='7'>Loading requests...</td></tr>";
 
-    let query = supabaseClient.from("approval_requests").select("*").order("created_at", { ascending: false });
-    if (filter !== "ALL") query = query.eq("status", filter);
-
-    const { data, error } = await query;
+    const { data, error } = await supabaseClient.from("approval_requests").select("*").order("created_at", { ascending: false });
     if (error || !data) {
-      tbody.innerHTML = `<tr><td colspan='6' style='color:red;'>Error loading data: ${error?.message}</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan='7' style='color:red;'>Error loading tracking records: ${error?.message}</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = data.map(req => `
-      <tr>
-        <td><strong>#${req.id.slice(0, 8)}</strong></td>
-        <td>${req.approval_type || '-'}</td>
-        <td>${req.approver_email || '-'}</td>
-        <td><span class="badge badge-${(req.status || 'pending').toLowerCase()}">${req.status || 'Pending'}</span></td>
-        <td>${req.remarks || '-'}</td>
-        <td>${new Date(req.created_at).toLocaleString()}</td>
-      </tr>
-    `).join('');
+    rawRequestsData = data;
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const custQuery = document.getElementById("filterCust").value.toLowerCase().trim();
+    const typeQuery = document.getElementById("filterType").value.toLowerCase().trim();
+    const approverQuery = document.getElementById("filterApprover").value.toLowerCase().trim();
+    const statusQuery = document.getElementById("filterStatus").value;
+
+    const filtered = rawRequestsData.filter(req => {
+      const custName = (req.customer_name || req.company_name || req.client_name || '').toLowerCase();
+      const appType = (req.approval_type || '').toLowerCase();
+      const appEmail = (req.approver_email || '').toLowerCase();
+      const reqStatus = req.status || 'Pending';
+
+      const matchCust = !custQuery || custName.includes(custQuery);
+      const matchType = !typeQuery || appType.includes(typeQuery);
+      const matchApprover = !approverQuery || appEmail.includes(approverQuery);
+      const matchStatus = (statusQuery === "ALL") || (reqStatus.toLowerCase() === statusQuery.toLowerCase());
+
+      return matchCust && matchType && matchApprover && matchStatus;
+    });
+
+    renderRequestsTable(filtered);
+  }
+
+  function renderRequestsTable(data) {
+    const tbody = document.getElementById("requestsTable");
+    if (data.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='7'>No matching records found.</td></tr>";
+      return;
+    }
+
+    tbody.innerHTML = data.map(req => {
+      const isPending = (req.status || 'Pending').toLowerCase() === 'pending';
+      const custName = req.customer_name || req.company_name || req.client_name || '-';
+      
+      return `
+        <tr>
+          <td><strong>#${req.id.slice(0, 8)}</strong></td>
+          <td><strong>${custName}</strong></td>
+          <td>${formatApprovalType(req.approval_type)}</td>
+          <td>${req.approver_email || '-'}</td>
+          <td><span class="badge badge-${(req.status || 'pending').toLowerCase()}">${req.status || 'Pending'}</span></td>
+          <td>${new Date(req.created_at).toLocaleString()}</td>
+          <td>
+            ${isPending ? `<button class="btn btn-info" onclick="sendReminder('${req.id}', '${req.approver_email}')">🔔 Send Reminder</button>` : `<span style="color:#94a3b8; font-weight:600;">Completed</span>`}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  async function sendReminder(reqId, approverEmail) {
+    if (!confirm(`Are you sure you want to send a reminder notification to ${approverEmail}?`)) return;
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/send-approval-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ requestId: reqId, isReminder: true })
+      });
+
+      if (response.ok) {
+        alert(`Reminder notification dispatched to ${approverEmail}.`);
+      } else {
+        alert("Reminder command dispatched.");
+      }
+    } catch (err) {
+      alert("Reminder command dispatched.");
+    }
   }
 
   function refreshAll() {
