@@ -47,6 +47,8 @@
 <script>
   const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
   const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
+  const DECISION_EMAIL_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co/functions/v1/send-decision-email";
+  
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -70,7 +72,6 @@
       return;
     }
 
-    // Lookup request in database
     if (token) {
       const { data } = await supabaseClient.from('approval_requests').select('*').eq('approval_token', token);
       if (data && data.length > 0) currentRequest = data[0];
@@ -97,7 +98,6 @@
       return;
     }
 
-    // Render Form
     titleEl.innerText = "Confirm Action";
     subMessageEl.innerText = `You are about to submit a decision for request #${currentRequest.id.slice(0, 8)}.`;
 
@@ -109,7 +109,7 @@
       badgeContainer.innerHTML = '<span class="action-badge reject-badge">Action: REJECT</span>';
       submitBtn.innerText = "Submit Rejection";
       submitBtn.className = "btn-reject";
-      reqStar.style.display = "inline"; // Remarks mandatory on Reject
+      reqStar.style.display = "inline";
       document.getElementById('remarks').required = true;
     }
 
@@ -141,6 +141,12 @@
       statusEl.innerText = "Error: " + error.message;
       submitBtn.disabled = false;
     } else {
+      fetch(DECISION_EMAIL_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: currentRequest.id, status: newStatus, remarks: remarksVal })
+      }).catch(err => console.error("Decision email error:", err));
+
       document.getElementById('decisionForm').style.display = "none";
       document.getElementById('title').innerText = `Request ${newStatus}!`;
       document.getElementById('title').className = action === 'approve' ? "success" : "error";
