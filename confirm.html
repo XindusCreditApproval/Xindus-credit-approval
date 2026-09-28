@@ -2,17 +2,80 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Redirecting…</title>
-<!-- Old approval links point here. Forward them (with ?action=&token=) to the new approval page. -->
-<script>
-  window.location.replace("https://xinduscreditapproval.netlify.app/" + window.location.search);
-</script>
-<noscript>
-  <meta http-equiv="refresh" content="0; url=https://xinduscreditapproval.netlify.app/">
-</noscript>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Approval Confirmation</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<style>
+  body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background-color: #f4f6f8; }
+  .card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 400px; width: 100%; }
+  h2 { margin-top: 0; color: #333; }
+  p { font-size: 16px; color: #666; margin-bottom: 20px; }
+  .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #188038; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+  @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  .success { color: #188038; font-weight: bold; font-size: 18px; }
+  .error { color: #d93025; font-weight: bold; font-size: 18px; }
+</style>
 </head>
-<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 60px; color: #555;">
-  <p>Redirecting to the approval page…</p>
+<body>
+
+<div class="card" id="cardContent">
+  <div class="spinner"></div>
+  <p>Processing your response, please wait...</p>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  async function processApproval() {
+    const card = document.getElementById("cardContent");
+    const urlParams = new URLSearchParams(window.location.search);
+    const action = urlParams.get('action');
+    const token = urlParams.get('token');
+
+    if (!action || !token) {
+      card.innerHTML = `<h2 class="error">Invalid Request</h2><p>Invalid or missing approval link parameters.</p>`;
+      return;
+    }
+
+    // Fetch token details
+    const { data: request, error: fetchError } = await supabaseClient
+      .from('approval_requests')
+      .select('*')
+      .eq('approval_token', token)
+      .maybeSingle();
+
+    if (fetchError || !request) {
+      card.innerHTML = `<h2 class="error">Invalid approval link.</h2><p>This token is either invalid or expired.</p>`;
+      return;
+    }
+
+    if (request.status && request.status !== 'Pending') {
+      card.innerHTML = `<h2>Already Actioned</h2><p>This request has already been marked as <b>${request.status}</b>.</p>`;
+      return;
+    }
+
+    const newStatus = action.toLowerCase() === 'approve' ? 'Approved' : 'Rejected';
+
+    const { error: updateError } = await supabaseClient
+      .from('approval_requests')
+      .update({
+        status: newStatus,
+        action_taken_at: new Date().toISOString()
+      })
+      .eq('approval_token', token);
+
+    if (updateError) {
+      card.innerHTML = `<h2 class="error">Error</h2><p>Could not update request status. Please try again.</p>`;
+    } else {
+      const color = newStatus === 'Approved' ? '#188038' : '#d93025';
+      card.innerHTML = `<h2 style="color:${color}">Request ${newStatus}!</h2><p>Thank you for your response. The request status has been updated to <b>${newStatus}</b>.</p>`;
+    }
+  }
+
+  processApproval();
+</script>
+
 </body>
 </html>
