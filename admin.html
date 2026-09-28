@@ -503,7 +503,7 @@
     else loadMatrix();
   }
 
-  /* Request Tracking, Dynamic Datalist & Reminder Email Functions */
+  /* Request Tracking, Dynamic Datalist & Fixed Reminder Email Functions */
   async function loadRequests() {
     const tbody = document.getElementById("requestsTable");
     tbody.innerHTML = "<tr><td colspan='8'>Loading requests...</td></tr>";
@@ -593,31 +593,34 @@
     if (!confirm(`Are you sure you want to send a REMINDER EMAIL to ${approverEmail}?`)) return;
 
     try {
-      // Direct Edge Function trigger with reminder subject flag
+      // Pass both 'id' and 'requestId' so the Edge function gets the required field
+      const payload = { 
+        id: reqId,
+        requestId: reqId, 
+        isReminder: true,
+        subjectPrefix: "REMINDER: "
+      };
+
       const { data, error } = await supabaseClient.functions.invoke('send-approval-email', {
-        body: { 
-          requestId: reqId, 
-          isReminder: true,
-          subjectPrefix: "REMINDER: "
-        }
+        body: payload
       });
 
       if (error) {
-        // Fallback HTTP POST Trigger if Supabase Client invoke misses edge route
+        // Fallback HTTP POST Trigger
         const resp = await fetch(`${SUPABASE_URL}/functions/v1/send-approval-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
           },
-          body: JSON.stringify({ requestId: reqId, isReminder: true, subjectPrefix: "REMINDER: " })
+          body: JSON.stringify(payload)
         });
         
         if (resp.ok) {
           alert(`✅ REMINDER EMAIL successfully sent to ${approverEmail}!`);
         } else {
           const errTxt = await resp.text();
-          alert(`⚠️ Could not deliver reminder email: ${errTxt || 'Edge Function execution error'}`);
+          alert(`⚠️ Could not deliver reminder email: ${errTxt}`);
         }
       } else {
         alert(`✅ REMINDER EMAIL successfully dispatched to ${approverEmail}!`);
