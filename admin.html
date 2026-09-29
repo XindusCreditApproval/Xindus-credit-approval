@@ -198,10 +198,10 @@
 
   // --- AUTHENTICATION CHECK ---
   async function verifyAdminEmail() {
-    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const emailInput = document.getElementById('loginEmail').value.trim().toLowerCase();
     const msg = document.getElementById('loginMessage');
     
-    if (!email) {
+    if (!emailInput) {
       msg.style.color = "red";
       msg.innerText = "Please enter an email address.";
       return;
@@ -210,20 +210,26 @@
     msg.style.color = "#333";
     msg.innerText = "Verifying access rights...";
 
-    // Check directly in allowed_admins table
-    const { data: allowed, error } = await supabaseClient
+    // Case-insensitive email search
+    const { data: allowedList, error } = await supabaseClient
       .from('allowed_admins')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
+      .select('email');
 
-    if (error || !allowed) {
+    if (error) {
+      msg.style.color = "red";
+      msg.innerText = "❌ Database Error: " + error.message;
+      return;
+    }
+
+    const isMatch = allowedList && allowedList.some(item => item.email && item.email.trim().toLowerCase() === emailInput);
+
+    if (!isMatch) {
       msg.style.color = "red";
       msg.innerText = "❌ Access Denied: This email is not authorized as Admin.";
       return;
     }
 
-    loginSuccess(email);
+    loginSuccess(emailInput);
   }
 
   function loginSuccess(email) {
