@@ -20,7 +20,7 @@
     input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 13px; }
     
     .btn { padding: 10px 18px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background-color 0.2s ease; }
-    .btn-google { background-color: #4285F4; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .btn-google { background-color: #4285F4; color: white; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #357ae8; }
     .btn-google:hover { background-color: #357ae8; }
     .btn-primary { background-color: #1b5e20; color: white; width: 100%; }
     .btn-primary:hover { background-color: #144817; }
@@ -70,7 +70,7 @@
   <div class="card header-action" style="padding: 12px 20px;">
     <h2>💼 Xindus Admin Control Center</h2>
     <div class="user-info">
-      <span>Logged in as: <strong id="currentUserEmail">-</strong></span>
+      <span>Logged in as: <strong id="currentUserEmail"></strong></span>
       <button class="btn btn-delete btn-inline" onclick="logout()">Logout</button>
     </div>
   </div>
@@ -105,11 +105,11 @@
         </div>
         <div class="form-group">
           <label>Approver Email *</label>
-          <input type="email" id="m_approver_email" placeholder="approver@xindus.com" required />
+          <input type="email" id="m_approver_email" placeholder="" required />
         </div>
         <div class="form-group">
           <label>CC Email *</label>
-          <input type="email" id="m_cc_email" placeholder="manager@xindus.com" required />
+          <input type="email" id="m_cc_email" placeholder="" required />
         </div>
       </div>
       <button type="submit" id="saveMatrixBtn" class="btn btn-primary btn-inline">➕ Add Logic Row</button>
@@ -142,7 +142,7 @@
     <div style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 15px;">
       <div class="form-group" style="max-width: 350px;">
         <label>New Admin User Email *</label>
-        <input type="email" id="cfg_new_admin_email" placeholder="user@xindus.com" />
+        <input type="email" id="cfg_new_admin_email" placeholder="" />
       </div>
       <button class="btn btn-primary btn-inline" onclick="grantAdminAccess()">Grant Admin Access</button>
     </div>
@@ -195,15 +195,14 @@
 
 <script>
   const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_j0edpjipxRUlzsisHeIyqg_4gWCjqNM';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // --- GOOGLE OAUTH LOGIN ---
   async function loginWithGoogle() {
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.href.split('?')[0] // Returns back to admin.html
+        redirectTo: window.location.href.split('?')[0]
       }
     });
 
@@ -214,11 +213,9 @@
     }
   }
 
-  // --- CHECK AUTHENTICATED SESSION AND AUTHORIZE ADMIN ---
   async function checkAdminAuthorization() {
     const msg = document.getElementById('loginMessage');
 
-    // 1. Check if user is authenticated via Supabase Auth
     const { data: { session } } = await supabaseClient.auth.getSession();
 
     if (!session || !session.user || !session.user.email) {
@@ -229,16 +226,15 @@
 
     const authenticatedEmail = session.user.email.trim().toLowerCase();
     msg.style.color = "#333";
-    msg.innerText = "Verifying admin access for " + authenticatedEmail + "...";
+    msg.innerText = "Verifying admin access...";
 
-    // 2. Cross-check authenticated email with allowed_admins database table
     const { data: allowedList, error } = await supabaseClient
       .from('allowed_admins')
       .select('email');
 
     if (error) {
       msg.style.color = "red";
-      msg.innerText = "❌ DB Error verifying admin access: " + error.message;
+      msg.innerText = "❌ Database Error: " + error.message;
       return;
     }
 
@@ -247,7 +243,6 @@
     );
 
     if (isAuthorized) {
-      // Access Granted
       document.getElementById('loginSection').style.display = 'none';
       document.getElementById('dashboardContent').style.display = 'block';
       document.getElementById('currentUserEmail').innerText = authenticatedEmail;
@@ -256,11 +251,9 @@
       fetchAdminsList();
       fetchRequests();
     } else {
-      // Access Denied: Signed in with Google, but not in allowed_admins list
       msg.style.color = "red";
-      msg.innerText = `❌ Access Denied: ${authenticatedEmail} is not authorized in allowed_admins.`;
+      msg.innerText = `❌ Access Denied: Signed in email is not authorized in allowed_admins.`;
       
-      // Sign out from Supabase Auth session after 3 seconds
       setTimeout(async () => {
         await supabaseClient.auth.signOut();
       }, 3000);
@@ -272,17 +265,8 @@
     location.reload();
   }
 
-  // --- SECTION 1: MATRIX THRESHOLDS ---
-  let matrixData = JSON.parse(localStorage.getItem('xindus_approval_matrix')) || [
-    {
-      criteria: 'Credit Limit Extension',
-      amountFrom: 0,
-      amountTo: 50000,
-      approverName: 'Finance Manager',
-      approverEmail: 'approver@xindus.com',
-      ccEmail: 'finance@xindus.com'
-    }
-  ];
+  // MATRIX LOGIC
+  let matrixData = JSON.parse(localStorage.getItem('xindus_approval_matrix')) || [];
 
   function renderMatrixTable() {
     const tbody = document.getElementById('matrixTableBody');
@@ -359,7 +343,7 @@
     document.getElementById('cancelEditBtn').style.display = 'none';
   }
 
-  // --- SECTION 2: ADMIN ACCESS MANAGEMENT ---
+  // ADMIN MANAGEMENT
   async function fetchAdminsList() {
     const { data, error } = await supabaseClient.from('allowed_admins').select('*').order('id', { ascending: true });
     const tbody = document.getElementById('adminsTableBody');
@@ -374,7 +358,7 @@
           <td><strong>${adm.email}</strong></td>
           <td>${formattedDate}</td>
           <td>
-            ${adm.email !== 'vikas.p@xindus.net' ? `<button class="btn btn-delete" onclick="revokeAdminAccess('${adm.id}')">Revoke Access</button>` : '<em>Main Owner</em>'}
+            <button class="btn btn-delete" onclick="revokeAdminAccess('${adm.id}')">Revoke Access</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -407,7 +391,7 @@
     }
   }
 
-  // --- SECTION 3: REQUESTS TRACKING ---
+  // TRACKING
   async function fetchRequests() {
     const { data, error } = await supabaseClient
       .from('approval_requests')
@@ -477,7 +461,6 @@
     }
   }
 
-  // AUTO AUTH CHECK ON PAGE LOAD / OAUTH REDIRECT
   window.onload = function() {
     checkAdminAuthorization();
   };
