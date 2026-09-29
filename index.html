@@ -1,130 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Xindus - Credit Approval Request Form</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 0; padding: 20px; }
-    .container { max-width: 650px; margin: 0 auto; background: #ffffff; padding: 25px 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    h2 { color: #1b5e20; margin-top: 0; margin-bottom: 5px; }
-    p.subtitle { font-size: 13px; color: #666; margin-bottom: 25px; }
-    .form-group { margin-bottom: 18px; text-align: left; }
-    label { font-weight: bold; display: block; margin-bottom: 6px; font-size: 13px; color: #333; }
-    input, select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 14px; }
-    input:focus, select:focus, textarea:focus { border-color: #1b5e20; outline: none; }
-    .btn-submit { background-color: #1b5e20; color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: bold; border-radius: 6px; cursor: pointer; width: 100%; margin-top: 10px; }
-    .btn-submit:hover { background-color: #144817; }
-    #responseMsg { margin-top: 15px; font-weight: bold; font-size: 14px; text-align: center; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xindus - Credit Approval Request</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 650px; background: #ffffff; padding: 30px; border-radius: 8px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { color: #1e5631; margin-top: 0; text-align: center; }
+        .sub-text { font-size: 13px; color: #666; text-align: center; margin-bottom: 20px; }
+        .form-group { margin-bottom: 18px; }
+        label { display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 6px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; background-color: #1e5631; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        button:hover { background-color: #143d22; }
+        .status-msg { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; text-align: center; font-weight: bold; font-size: 13px; }
+        .error { background-color: #ffe6e6; color: #d9534f; border: 1px solid #f5c6cb; }
+        .success { background-color: #e6ffed; color: #28a745; border: 1px solid #c3e6cb; }
+    </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>📋 Credit Approval Request Form</h2>
-  <p class="subtitle">Please fill in the required details to submit a credit limit request.</p>
+    <h2>📋 Credit Approval Request Form</h2>
+    <p class="sub-text">Please fill in the required details to submit a credit limit request.</p>
 
-  <form id="creditForm" onsubmit="submitRequest(event)">
-    
-    <div class="form-group">
-      <label>Customer ID / Name *</label>
-      <input type="text" id="customer_id_name" placeholder="e.g. CUST-1029 / ABC Logistics" required />
-    </div>
+    <form id="creditForm">
+        <div class="form-group">
+            <label>Your Email Address (Form Submitter) *</label>
+            <input type="email" id="submitterEmail" placeholder="e.g. vikas.p@xindus.net" required>
+        </div>
 
-    <div class="form-group">
-      <label>Sales POC Name *</label>
-      <input type="text" id="sales_poc_name" placeholder="Your Name" required />
-    </div>
+        <div class="form-group">
+            <label>Customer ID / Name *</label>
+            <input type="text" id="customerId" required>
+        </div>
 
-    <div class="form-group">
-      <label>Approval Criteria / Reason *</label>
-      <select id="approval_type" required>
-        <option value="">-- Select Criteria --</option>
-        <option value="Credit Limit Extension">Credit Limit Extension</option>
-        <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection - Credit Limit Exception</option>
-        <option value="Temporary Credit - Insurer Approval Under Process">Temporary Credit - Insurer Approval Under Process</option>
-      </select>
-    </div>
+        <div class="form-group">
+            <label>Sales POC Name *</label>
+            <input type="text" id="salesPoc" required>
+        </div>
 
-    <div class="form-group">
-      <label>Additional Credit Required (₹) *</label>
-      <input type="number" id="additional_credit_requested" min="0" placeholder="e.g. 50000" required />
-    </div>
+        <div class="form-group">
+            <label>Approval Criteria / Reason *</label>
+            <select id="approvalCriteria" required>
+                <option value="">-- Select Criteria --</option>
+                <option value="Credit Limit Extension">Credit Limit Extension</option>
+                <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection - Credit Limit Exception</option>
+                <option value="Temporary Credit Approval - Insurer Limit Under Process">Temporary Credit Approval - Insurer Limit Under Process</option>
+            </select>
+        </div>
 
-    <div class="form-group">
-      <label>Current Credit Limit (₹)</label>
-      <input type="number" id="current_credit_limit" min="0" placeholder="e.g. 100000" />
-    </div>
+        <!-- Unified Field Name across all criteria -->
+        <div class="form-group">
+            <label>Credit Limit Required (₹) *</label>
+            <input type="number" id="creditLimitRequired" min="0" step="any" required>
+        </div>
 
-    <div class="form-group">
-      <label>Current Outstanding (₹)</label>
-      <input type="number" id="current_outstanding" min="0" placeholder="e.g. 25000" />
-    </div>
+        <div class="form-group">
+            <label>Current Credit Limit (₹)</label>
+            <input type="number" id="currentCreditLimit" value="0">
+        </div>
 
-    <div class="form-group">
-      <label>Credit Requirement Type</label>
-      <select id="credit_requirement_type">
-        <option value="One Time">One Time</option>
-        <option value="Regular / Recurring">Regular / Recurring</option>
-      </select>
-    </div>
+        <div class="form-group">
+            <label>Current Outstanding (₹)</label>
+            <input type="number" id="currentOutstanding" value="0">
+        </div>
 
-    <div class="form-group">
-      <label>Expected Payment Timeline</label>
-      <input type="text" id="expected_payment_timeline" placeholder="e.g. 15 Days / Next Month" />
-    </div>
+        <div class="form-group">
+            <label>Credit Requirement Type</label>
+            <select id="creditType">
+                <option value="Regular / Recurring">Regular / Recurring</option>
+                <option value="Temporary / One-Time">Temporary / One-Time</option>
+            </select>
+        </div>
 
-    <button type="submit" id="submitBtn" class="btn-submit">Submit Request</button>
-  </form>
+        <div class="form-group">
+            <label>Expected Payment Timeline (Days)</label>
+            <input type="text" id="paymentTimeline" placeholder="e.g. 30 Days">
+        </div>
 
-  <div id="responseMsg"></div>
+        <button type="submit" id="submitBtn">Submit Request</button>
+    </form>
+
+    <div id="statusMsg" class="status-msg"></div>
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    // Config Supabase Connection
+    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
+    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function submitRequest(event) {
-    event.preventDefault();
-    
-    const submitBtn = document.getElementById('submitBtn');
-    const msgDiv = document.getElementById('responseMsg');
-    
-    submitBtn.disabled = true;
-    submitBtn.innerText = "Submitting...";
-    msgDiv.innerText = "";
+    document.getElementById('creditForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const statusMsg = document.getElementById('statusMsg');
+        
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Processing...';
+        statusMsg.style.display = 'none';
 
-    const formData = {
-      customer_id_name: document.getElementById('customer_id_name').value.trim(),
-      sales_poc_name: document.getElementById('sales_poc_name').value.trim(),
-      approval_type: document.getElementById('approval_type').value,
-      additional_credit_requested: parseFloat(document.getElementById('additional_credit_requested').value) || 0,
-      current_credit_limit: parseFloat(document.getElementById('current_credit_limit').value) || 0,
-      current_outstanding: parseFloat(document.getElementById('current_outstanding').value) || 0,
-      credit_requirement_type: document.getElementById('credit_requirement_type').value,
-      expected_payment_timeline: document.getElementById('expected_payment_timeline').value.trim(),
-      status: 'Pending'
-    };
+        const submitterEmail = document.getElementById('submitterEmail').value.trim();
+        const criteria = document.getElementById('approvalCriteria').value;
+        const creditAmount = parseFloat(document.getElementById('creditLimitRequired').value);
 
-    const { data, error } = await supabaseClient
-      .from('approval_requests')
-      .insert([formData]);
+        try {
+            // Step 1: Fetch Approver & CC configuration from 'approval_logic' matrix set via Admin Portal
+            let approverEmail = 'default-approver@xindus.net';
+            let matrixCcEmail = '';
 
-    if (error) {
-      msgDiv.style.color = "red";
-      msgDiv.innerText = "❌ Error submitting request: " + error.message;
-      submitBtn.disabled = false;
-      submitBtn.innerText = "Submit Request";
-    } else {
-      msgDiv.style.color = "green";
-      msgDiv.innerText = "✅ Your Credit Approval Request has been submitted successfully!";
-      document.getElementById('creditForm').reset();
-      submitBtn.disabled = false;
-      submitBtn.innerText = "Submit Request";
-    }
-  }
+            const { data: matrixData, error: matrixErr } = await supabase
+                .from('approval_logic')
+                .select('*')
+                .eq('criteria', criteria)
+                .lte('amount_from', creditAmount)
+                .gte('amount_to', creditAmount)
+                .limit(1);
+
+            if (!matrixErr && matrixData && matrixData.length > 0) {
+                approverEmail = matrixData[0].approver_email;
+                matrixCcEmail = matrixData[0].cc_email || '';
+            }
+
+            // Combine Admin CC Emails with Submitter Email dynamically
+            let finalCcList = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
+
+            // Step 2: Insert into database table
+            const { error: insertError } = await supabase
+                .from('approval_requests')
+                .insert([{
+                    customer_id: document.getElementById('customerId').value,
+                    sales_poc_name: document.getElementById('salesPoc').value,
+                    submitter_email: submitterEmail,
+                    approval_criteria: criteria,
+                    credit_limit_required: creditAmount, // Unified column name
+                    current_credit_limit: parseFloat(document.getElementById('currentCreditLimit').value || 0),
+                    current_outstanding: parseFloat(document.getElementById('currentOutstanding').value || 0),
+                    credit_requirement_type: document.getElementById('creditType').value,
+                    expected_payment_timeline: document.getElementById('paymentTimeline').value,
+                    approver_email: approverEmail,
+                    cc_emails: finalCcList,
+                    status: 'Pending'
+                }]);
+
+            if (insertError) throw insertError;
+
+            statusMsg.className = 'status-msg success';
+            statusMsg.innerText = '✅ Request submitted successfully! CC copy set for ' + submitterEmail;
+            statusMsg.style.display = 'block';
+            document.getElementById('creditForm').reset();
+
+        } catch (err) {
+            statusMsg.className = 'status-msg error';
+            statusMsg.innerText = '❌ Error submitting request: ' + err.message;
+            statusMsg.style.display = 'block';
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Submit Request';
+        }
+    });
 </script>
 
 </body>
