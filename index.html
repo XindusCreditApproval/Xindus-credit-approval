@@ -3,116 +3,129 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Xindus Credit Limit Approval Request</title>
+  <title>Xindus Credit Approval Admin Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
-    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h2 { color: #1b5e20; text-align: center; }
-    .form-group { margin-bottom: 15px; }
-    label { font-weight: bold; display: block; margin-bottom: 5px; color: #333; }
-    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-    button { width: 100%; background-color: #1b5e20; color: white; padding: 12px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
-    button:hover { background-color: #144817; }
+    .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { color: #1b5e20; display: inline-block; margin-right: 15px; }
+    .btn-refresh { background-color: #1b5e20; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .btn-refresh:hover { background-color: #144817; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 13px; }
+    th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+    th { background-color: #f2f2f2; font-weight: bold; }
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; text-align: center; }
+    .status-Approved { background-color: #d4edda; color: #155724; }
+    .status-Pending { background-color: #fff3cd; color: #856404; }
+    .status-Rejected { background-color: #f8d7da; color: #721c24; }
+    .btn-reminder { background-color: #ff9800; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+    .btn-reminder:hover { background-color: #e68a00; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Xindus Credit Approval Form</h2>
-  
-  <form id="creditApprovalForm" onsubmit="handleFormSubmit(event)">
-    
-    <div class="form-group">
-      <label>Approval Type *</label>
-      <select id="approval_type" required>
-        <option value="">-- Select Approval Criteria --</option>
-        <option value="Credit Limit Extension">Credit Limit Extension</option>
-        <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection – Credit Limit Exception</option>
-        <option value="Temporary Credit - Insurer Approval Under Process">Temporary Credit – Insurer Approval Under Process</option>
-      </select>
-    </div>
+  <h2>Approval Requests Tracking</h2>
+  <button onclick="fetchRequests()" class="btn-refresh">🔄 Refresh Data</button>
 
-    <!-- Mandatory Customer ID / Name -->
-    <div class="form-group">
-      <label>Customer ID / Name *</label>
-      <input type="text" id="customer_id_name" placeholder="e.g. CUST-10293 / Acme Corp" required />
-    </div>
-
-    <!-- Mandatory Sales POC Name -->
-    <div class="form-group">
-      <label>Sales POC Name *</label>
-      <input type="text" id="sales_poc_name" placeholder="Sales Executive Name" required />
-    </div>
-
-    <!-- Mandatory Uniform Amount Field (Numeric Only) -->
-    <div class="form-group">
-      <label>Additional Credit Required (₹) *</label>
-      <input type="number" id="additional_credit_requested" min="0" step="any" placeholder="1200" required />
-    </div>
-
-    <!-- Mandatory Current Credit Limit (Numeric Only) -->
-    <div class="form-group">
-      <label>Current Credit Limit (₹) *</label>
-      <input type="number" id="current_credit_limit" min="0" step="any" placeholder="50000" required />
-    </div>
-
-    <!-- Mandatory Current Outstanding (Numeric Only) -->
-    <div class="form-group">
-      <label>Current Outstanding (₹) *</label>
-      <input type="number" id="current_outstanding" min="0" step="any" placeholder="15000" required />
-    </div>
-
-    <!-- Renamed Dropdown Field -->
-    <div class="form-group">
-      <label>Credit Requirement Type *</label>
-      <select id="credit_requirement_type" required>
-        <option value="">-- Select Type --</option>
-        <option value="Temporary">Temporary</option>
-        <option value="Permanent">Permanent</option>
-      </select>
-    </div>
-    <!-- Mandatory Timeline with Suggestion Placeholder -->
-    <div class="form-group">https://mhvxlgqkfxghpkjfvude.supabase.co'
-      <label>Expected Payment Timeline *</label>
-      <input type="text" id="expected_payment_timeline" placeholder="e.g. 10 Days" required />
-    </div>
-
-    <button type="submit">Submit Request</button>
-  </form>
+  <table>
+    <thead>
+      <tr>
+        <th>Customer ID / Name</th>
+        <th>Sales POC</th>
+        <th>Approval Criteria / Type</th>
+        <th>Add'l Credit Required (₹)</th>
+        <th>Current Limit (₹)</th>
+        <th>Current Outstanding (₹)</th>
+        <th>Req Type</th>
+        <th>Timeline</th>
+        <th>Status</th>
+        <th>Action</th>
+      </tr>
+    </thead>
+    <tbody id="requestsTableBody">
+      <!-- Dynamic Data Rows -->
+    </tbody>
+  </table>
 </div>
 
 <script>
-  const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co'; // Replace with actual Supabase URL
-  const SUPABASE_ANON_KEY = 'sb_publishable_jOedpjipxRUlzsisHe1yqg_4gWCjqNM'; // Replace with actual Anon Key
+  const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_j0edpjipxRUlzsisHeIyqg_4gWCjqNM';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  async function handleFormSubmit(event) {
-    event.preventDefault();
-
-    const payload = {
-      customer_id_name: document.getElementById('customer_id_name').value,
-      sales_poc_name: document.getElementById('sales_poc_name').value,
-      additional_credit_requested: parseFloat(document.getElementById('additional_credit_requested').value),
-      current_credit_limit: parseFloat(document.getElementById('current_credit_limit').value || 0),
-      current_outstanding: parseFloat(document.getElementById('current_outstanding').value || 0),
-      credit_requirement_type: document.getElementById('credit_requirement_type').value,
-      expected_payment_timeline: document.getElementById('expected_payment_timeline').value,
-      approval_type: document.getElementById('approval_type').value,
-      status: 'Pending'
-    };
-
+  async function fetchRequests() {
     const { data, error } = await supabaseClient
       .from('approval_requests')
-      .insert([payload]);
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (error) {
-      alert("Error submitting request: " + error.message);
-    } else {
-      alert("Request submitted successfully!");
-      document.getElementById('creditApprovalForm').reset();
+      alert("Error fetching data: " + error.message);
+      return;
+    }
+
+    const tbody = document.getElementById('requestsTableBody');
+    tbody.innerHTML = '';
+
+    data.forEach(req => {
+      // Fallbacks to handle legacy columns along with new standard fields
+      const customer = req.customer_id_name || req.customer_id || req.customer_name || req.company_name || 'N/A';
+      const salesPoc = req.sales_poc_name || req.sales_poc || req.sales_rep || '-';
+      const approvalType = req.approval_type || req.criteria || '-';
+      
+      const addlCredit = req.additional_credit_requested ?? req.additional_credit ?? req.credit_limit ?? req.amount ?? 0;
+      const currentLimit = req.current_credit_limit ?? req.current_limit ?? 0;
+      const outstanding = req.current_outstanding ?? req.outstanding ?? 0;
+      
+      const reqType = req.credit_requirement_type || req.req_type || '-';
+      const timeline = req.expected_payment_timeline || req.payment_timeline || req.timeline || '-';
+      const status = req.status || 'Pending';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${customer}</strong></td>
+        <td>${salesPoc}</td>
+        <td>${approvalType}</td>
+        <td>₹${Number(addlCredit).toLocaleString('en-IN')}</td>
+        <td>₹${Number(currentLimit).toLocaleString('en-IN')}</td>
+        <td>₹${Number(outstanding).toLocaleString('en-IN')}</td>
+        <td>${reqType}</td>
+        <td>${timeline}</td>
+        <td><span class="badge status-${status}">${status}</span></td>
+        <td>
+          <button onclick="sendReminder('${req.id}')" class="btn-reminder">🔔 Send Reminder</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function sendReminder(requestId) {
+    if (!confirm("Are you sure you want to send a reminder email?")) return;
+
+    try {
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/send-approval-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ id: requestId, isReminder: true })
+      });
+
+      const result = await response.json();
+      if (response.ok) {
+        alert("✅ REMINDER EMAIL successfully dispatched to approver!");
+      } else {
+        alert("❌ Failed to send reminder: " + JSON.stringify(result));
+      }
+    } catch (err) {
+      alert("Error: " + err.message);
     }
   }
+
+  window.onload = fetchRequests;
 </script>
 
 </body>
