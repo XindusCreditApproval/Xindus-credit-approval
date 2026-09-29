@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xindus Credit Approval Admin Dashboard</title>
+  <!-- Supabase JS Client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
@@ -93,7 +94,7 @@
         </tr>
       </thead>
       <tbody id="matrixTableBody">
-        <!-- Matrix Rows -->
+        <!-- Dynamic Rows -->
       </tbody>
     </table>
   </div>
@@ -149,18 +150,18 @@
 </div>
 
 <script>
-  // Valid Supabase Credentials
+  // Valid Supabase Credentials with correct URL & Publishable API key
   const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
   const SUPABASE_ANON_KEY = 'sb_publishable_j0edpjipxRUlzsisHeIyqg_4gWCjqNM';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Local Storage Matrix Data
+  // Dynamic Matrix Storage
   let matrixData = JSON.parse(localStorage.getItem('xindus_approval_matrix')) || [
     {
       criteria: 'Credit Limit Extension',
       amountFrom: 0,
       amountTo: 50000,
-      approverName: 'Finance Lead',
+      approverName: 'Finance Manager',
       approverEmail: 'approver@xindus.com',
       ccEmail: 'finance@xindus.com'
     }
@@ -256,6 +257,7 @@
     tbody.innerHTML = '';
 
     data.forEach(req => {
+      // Extended fallbacks to support legacy and current schema
       const customer = req.customer_id_name || req.customer_name || req.customer_id || req.company_name || 'N/A';
       const salesPoc = req.sales_poc_name || req.sales_poc || req.sales_rep || '-';
       const approvalType = req.approval_type || req.criteria || '-';
