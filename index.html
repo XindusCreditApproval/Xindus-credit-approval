@@ -1,219 +1,119 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Xindus Approval Request</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; color: #222; background-color: #f9f9f9; }
-  .card { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  h1 { font-size: 22px; margin-top: 0; color: #188038; }
-  label { display: block; margin-top: 14px; font-weight: bold; font-size: 14px; }
-  input, select, textarea {
-    width: 100%; box-sizing: border-box; padding: 9px; margin-top: 4px;
-    border: 1px solid #ccc; border-radius: 4px; font-size: 14px;
-  }
-  textarea { resize: vertical; }
-  button {
-    margin-top: 22px; padding: 12px 28px; background: #188038; color: #fff;
-    border: none; border-radius: 5px; font-weight: bold; font-size: 15px; cursor: pointer; width: 100%;
-  }
-  button:disabled { background: #999; cursor: not-allowed; }
-  .section { display: none; }
-  .section.active { display: block; }
-  #status { margin-top: 16px; font-size: 14px; text-align: center; font-weight: bold; }
-  .error { color: #d93025; }
-  .success { color: #188038; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Xindus Credit Limit Approval Request</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
+    .container { max-width: 600px; margin: 0 auto; background: #fff; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { color: #1b5e20; text-align: center; }
+    .form-group { margin-bottom: 15px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; color: #333; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { width: 100%; background-color: #1b5e20; color: white; padding: 12px; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    button:hover { background-color: #144817; }
+  </style>
 </head>
 <body>
 
-<div class="card">
-  <h1>Xindus — Approval Request</h1>
-
-  <form id="approvalForm">
-
-    <label for="approvalType">Approval Type</label>
-    <select id="approvalType" required>
-      <option value="">-- Select Approval Type --</option>
-      <option value="credit limit extension">Credit Limit Extension</option>
-      <option value="insurer rejection - credit limit exception">Insurer Rejection – Credit Limit Exception</option>
-      <option value="temporary credit - insurer approval under process">Temporary Credit – Insurer Approval Under Process</option>
-    </select>
-
-    <!-- Section 1: Credit Limit Extension -->
-    <div class="section" data-type="credit limit extension">
-      <label>Customer ID / Name</label><input data-field="customer_id_name">
-      <label>Reason for Credit Limit Enhancement</label><textarea rows="2" data-field="reason"></textarea>
-      <label>Current Credit Limit</label><input data-field="current_credit_limit">
-      <label>Current Outstanding</label><input data-field="current_outstanding">
-      <label>Ageing of Overdue</label><input data-field="ageing_overdue" placeholder="e.g. 30 days">
-      <label>Tentative Clearance Date</label><input type="date" data-field="tentative_clearance_date">
-      <label>Overdue Amount, if any</label><input data-field="overdue_amount">
-      <label>Additional Credit Requested</label><input data-field="additional_credit_requested">
-      <label>Sales Owner / KAM</label><input data-field="sales_owner_kam">
+<div class="container">
+  <h2>Xindus Credit Approval Form</h2>
+  
+  <form id="creditApprovalForm" onsubmit="handleFormSubmit(event)">
+    
+    <div class="form-group">
+      <label>Approval Type *</label>
+      <select id="approval_type" required>
+        <option value="">-- Select Approval Criteria --</option>
+        <option value="Credit Limit Extension">Credit Limit Extension</option>
+        <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection – Credit Limit Exception</option>
+        <option value="Temporary Credit - Insurer Approval Under Process">Temporary Credit – Insurer Approval Under Process</option>
+      </select>
     </div>
 
-    <!-- Section 2: Insurer Rejection – Credit Limit Exception -->
-    <div class="section" data-type="insurer rejection - credit limit exception">
-      <label>Customer Name</label><input data-field="customer_name">
-      <label>Sales POC Name</label><input data-field="sales_poc_name">
-      <label>Credit Limit Requested</label><input data-field="credit_limit_requested">
-      <label>Credit Requirement</label>
-      <select data-field="credit_requirement"><option value="">-- Select --</option><option>Temporary</option><option>Ongoing</option></select>
-      <label>Risk of Losing Customer/Business</label>
-      <select data-field="risk_of_losing_customer"><option value="">-- Select --</option><option>Yes</option><option>No</option></select>
-      <label>Customer Willing to Continue on Prepaid Terms</label>
-      <select data-field="customer_willing_prepaid"><option value="">-- Select --</option><option>Yes</option><option>No</option></select>
-      <label>Reason for Credit Requirement</label><textarea rows="2" data-field="reason_for_credit_requirement"></textarea>
-      <label>Expected Payment Timeline</label><input data-field="expected_payment_timeline">
+    <!-- Mandatory Customer ID / Name -->
+    <div class="form-group">
+      <label>Customer ID / Name *</label>
+      <input type="text" id="customer_id_name" placeholder="e.g. CUST-10293 / Acme Corp" required />
     </div>
 
-    <!-- Section 3: Temporary Credit – Insurer Approval Under Process -->
-    <div class="section" data-type="temporary credit - insurer approval under process">
-      <label>Customer Name</label><input data-field="customer_name">
-      <label>Sales POC Name</label><input data-field="sales_poc_name">
-      <label>Customer Type</label>
-      <select data-field="customer_type"><option value="">-- Select --</option><option>New</option><option>Existing</option></select>
-      <label>Customer Onboarding Date</label><input type="date" data-field="customer_onboarding_date">
-      <label>Credit Limit Required</label><input data-field="credit_limit_required">
-      <label>Reason for Credit Requirement Before Insurer Approval</label>
-      <textarea rows="2" data-field="reason_before_insurer_approval"></textarea>
-      <label>Expected First Payment Date</label><input type="date" data-field="expected_first_payment_date">
-      <label>Credit to be Blocked After Temporary Approval Expiry</label>
-      <select data-field="credit_blocked_after_expiry"><option value="">-- Select --</option><option>Yes</option><option>No</option></select>
+    <!-- Mandatory Sales POC Name -->
+    <div class="form-group">
+      <label>Sales POC Name *</label>
+      <input type="text" id="sales_poc_name" placeholder="Sales Executive Name" required />
     </div>
 
-    <button type="submit" id="submitBtn">Submit Request</button>
-    <div id="status"></div>
+    <!-- Mandatory Uniform Amount Field (Numeric Only) -->
+    <div class="form-group">
+      <label>Additional Credit Required (₹) *</label>
+      <input type="number" id="additional_credit_requested" min="0" step="any" placeholder="1200" required />
+    </div>
 
+    <!-- Mandatory Current Credit Limit (Numeric Only) -->
+    <div class="form-group">
+      <label>Current Credit Limit (₹) *</label>
+      <input type="number" id="current_credit_limit" min="0" step="any" placeholder="50000" required />
+    </div>
+
+    <!-- Mandatory Current Outstanding (Numeric Only) -->
+    <div class="form-group">
+      <label>Current Outstanding (₹) *</label>
+      <input type="number" id="current_outstanding" min="0" step="any" placeholder="15000" required />
+    </div>
+
+    <!-- Renamed Dropdown Field -->
+    <div class="form-group">
+      <label>Credit Requirement Type *</label>
+      <select id="credit_requirement_type" required>
+        <option value="">-- Select Type --</option>
+        <option value="Temporary">Temporary</option>
+        <option value="Permanent">Permanent</option>
+      </select>
+    </div>
+
+    <!-- Mandatory Timeline with Suggestion Placeholder -->
+    <div class="form-group">
+      <label>Expected Payment Timeline *</label>
+      <input type="text" id="expected_payment_timeline" placeholder="e.g. 10 Days" required />
+    </div>
+
+    <button type="submit">Submit Request</button>
   </form>
 </div>
 
 <script>
-  const SUPABASE_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo";
-  const SEND_EMAIL_FUNCTION_URL = "https://mhvxlgqkfxghpkjfvude.supabase.co/functions/v1/send-approval-email";
-  const DEFAULT_APPROVER_EMAIL = "vikas.p@xindus.net";
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL'; // Replace with actual Supabase URL
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Replace with actual Anon Key
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false }
-  });
+  async function handleFormSubmit(event) {
+    event.preventDefault();
 
-  const typeSelect = document.getElementById("approvalType");
-  const sections = document.querySelectorAll(".section");
-
-  typeSelect.addEventListener("change", () => {
-    sections.forEach(s => s.classList.toggle("active", s.dataset.type === typeSelect.value));
-  });
-
-  function toNumber(v) {
-    const n = parseFloat(String(v || "").replace(/[^0-9.]/g, ""));
-    return isNaN(n) ? 0 : n;
-  }
-
-  function getRoutingAmount(approvalType, d) {
-    if (approvalType === "credit limit extension") {
-      return toNumber(d.current_credit_limit) + toNumber(d.additional_credit_requested);
-    }
-    if (approvalType === "temporary credit - insurer approval under process") {
-      return toNumber(d.credit_limit_required);
-    }
-    if (approvalType === "insurer rejection - credit limit exception") {
-      return toNumber(d.credit_limit_requested);
-    }
-    return 0;
-  }
-
-  async function resolveRoutingFromDB(approvalType, amount) {
-    const { data: tiers, error } = await supabaseClient
-      .from("approval_matrix")
-      .select("*")
-      .eq("approval_type", approvalType)
-      .lte("limit_from", amount)
-      .gte("limit_to", amount);
-
-    if (error || !tiers || tiers.length === 0) {
-      return { email: DEFAULT_APPROVER_EMAIL, name: "Approver", cc: "" };
-    }
-
-    const matched = tiers[0];
-    return {
-      email: matched.approver_email,
-      name: matched.approver_name || "Approver",
-      cc: matched.cc_emails || ""
+    const payload = {
+      customer_id_name: document.getElementById('customer_id_name').value,
+      sales_poc_name: document.getElementById('sales_poc_name').value,
+      additional_credit_requested: parseFloat(document.getElementById('additional_credit_requested').value),
+      current_credit_limit: parseFloat(document.getElementById('current_credit_limit').value || 0),
+      current_outstanding: parseFloat(document.getElementById('current_outstanding').value || 0),
+      credit_requirement_type: document.getElementById('credit_requirement_type').value,
+      expected_payment_timeline: document.getElementById('expected_payment_timeline').value,
+      approval_type: document.getElementById('approval_type').value,
+      status: 'Pending'
     };
+
+    const { data, error } = await supabaseClient
+      .from('approval_requests')
+      .insert([payload]);
+
+    if (error) {
+      alert("Error submitting request: " + error.message);
+    } else {
+      alert("Request submitted successfully!");
+      document.getElementById('creditApprovalForm').reset();
+    }
   }
-
-  document.getElementById("approvalForm").addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    const statusEl = document.getElementById("status");
-    const submitBtn = document.getElementById("submitBtn");
-    statusEl.textContent = "";
-    statusEl.className = "";
-
-    const approvalType = typeSelect.value;
-    if (!approvalType) {
-      statusEl.textContent = "Please select an approval type.";
-      statusEl.className = "error";
-      return;
-    }
-
-    const activeSection = document.querySelector(`.section[data-type="${approvalType}"]`);
-    const requestData = {};
-    activeSection.querySelectorAll("[data-field]").forEach(el => {
-      requestData[el.dataset.field] = el.value.trim();
-    });
-
-    submitBtn.disabled = true;
-    statusEl.textContent = "Submitting request...";
-
-    try {
-      const amount = getRoutingAmount(approvalType, requestData);
-      const route = await resolveRoutingFromDB(approvalType, amount);
-      
-      // Generating Token beforehand so DB and Email match 100%
-      const token = crypto.randomUUID();
-
-      const payload = {
-        approval_type: approvalType,
-        approver_email: route.email,
-        approver_name: route.name,
-        cc_email: route.cc,
-        request_data: requestData,
-        approval_token: token,
-        status: "Pending"
-      };
-
-      const { data, error } = await supabaseClient
-        .from("approval_requests")
-        .insert(payload)
-        .select("id")
-        .single();
-
-      if (error) throw error;
-
-      fetch(SEND_EMAIL_FUNCTION_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: data.id, token: token }),
-      }).catch(err => console.error("Email trigger error:", err));
-
-      statusEl.textContent = "Request submitted successfully!";
-      statusEl.className = "success";
-      e.target.reset();
-      sections.forEach(s => s.classList.remove("active"));
-
-    } catch (err) {
-      console.error(err);
-      statusEl.textContent = "Submission failed: " + err.message;
-      statusEl.className = "error";
-    } finally {
-      submitBtn.disabled = false;
-    }
-  });
 </script>
 
 </body>
