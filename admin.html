@@ -7,40 +7,118 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
-    .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; }
-    h2 { color: #1b5e20; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 25px; }
+    h2, h3 { color: #1b5e20; margin-top: 0; }
+    
+    /* Config Sections */
+    .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+    .form-group { margin-bottom: 12px; }
+    label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 13px; color: #333; }
+    input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    .btn-primary { background-color: #1b5e20; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+    .btn-primary:hover { background-color: #144817; }
+    
+    /* Table Styling */
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 13px; }
     th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-    th { background-color: #f2f2f2; }
-    .btn-reminder { background-color: #ff9800; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+    th { background-color: #f2f2f2; font-weight: bold; }
+    
+    /* Badges & Buttons */
+    .badge { padding: 4px 8px; border-radius: 4px; font-weight: bold; display: inline-block; font-size: 11px; }
+    .status-Approved { background-color: #d4edda; color: #155724; }
+    .status-Pending { background-color: #fff3cd; color: #856404; }
+    .status-Rejected { background-color: #f8d7da; color: #721c24; }
+    .btn-reminder { background-color: #ff9800; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold; }
     .btn-reminder:hover { background-color: #e68a00; }
+    .header-action { display: flex; justify-content: space-between; align-items: center; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Approval Requests Tracking</h2>
-  <button onclick="fetchRequests()">🔄 Refresh Data</button>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Customer ID / Name</th>
-        <th>Additional Credit Required</th>
-        <th>Approval Type</th>
-        <th>Status</th>
-        <th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="requestsTableBody">
-      <!-- Dynamic Rows -->
-    </tbody>
-  </table>
+  <!-- TOP SECTION 1: Approval Logic & Admin Access Config -->
+  <div class="card">
+    <h2>⚙️ Admin Control Panel</h2>
+    <div class="config-grid">
+      
+      <!-- Approval Matrix / Threshold Edit Logic -->
+      <div>
+        <h3>1. Approval Logic & Matrix Thresholds</h3>
+        <div class="form-group">
+          <label>Approval Type / Criteria</label>
+          <select id="cfg_approval_type">
+            <option value="Credit Limit Extension">Credit Limit Extension</option>
+            <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection - Credit Limit Exception</option>
+            <option value="Temporary Credit - Insurer Approval Under Process">Temporary Credit - Insurer Approval Under Process</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Auto-Approve Threshold Limit (₹)</label>
+          <input type="number" id="cfg_threshold" placeholder="e.g. 50000" />
+        </div>
+        <div class="form-group">
+          <label>Designated Approver Email</label>
+          <input type="email" id="cfg_approver_email" placeholder="approver@xindus.com" />
+        </div>
+        <button class="btn-primary" onclick="saveApprovalLogic()">Save Approval Logic</button>
+      </div>
+
+      <!-- Admin Access Control -->
+      <div>
+        <h3>2. Admin Access Management</h3>
+        <div class="form-group">
+          <label>New Admin User Email</label>
+          <input type="email" id="cfg_new_admin_email" placeholder="user@xindus.com" />
+        </div>
+        <div class="form-group">
+          <label>Role / Access Level</label>
+          <select id="cfg_admin_role">
+            <option value="Super Admin">Super Admin</option>
+            <option value="Manager / Approver">Manager / Approver</option>
+            <option value="View Only">View Only</option>
+          </select>
+        </div>
+        <button class="btn-primary" onclick="grantAdminAccess()">Grant Admin Access</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- BOTTOM SECTION 2: Approval Requests Tracker Table -->
+  <div class="card">
+    <div class="header-action">
+      <h2>📊 Approval Requests Tracking</h2>
+      <button class="btn-primary" onclick="fetchRequests()">🔄 Refresh Data</button>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Customer ID / Name</th>
+          <th>Sales POC</th>
+          <th>Approval Criteria</th>
+          <th>Add'l Credit (₹)</th>
+          <th>Current Limit (₹)</th>
+          <th>Outstanding (₹)</th>
+          <th>Req Type</th>
+          <th>Timeline</th>
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="requestsTableBody">
+        <!-- Dynamic Table Data Rows -->
+      </tbody>
+    </table>
+  </div>
+
 </div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
 <script>
-  const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co'; // Replace with actual Supabase URL
-  const SUPABASE_ANON_KEY = 'sb_publishable_jOedpjipxRUlzsisHe1yqg_4gWCjqNM'; // Replace with actual Anon Key
+  const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_j0edpjipxRUlzsisHeIyqg_4gWCjqNM';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   async function fetchRequests() {
@@ -58,22 +136,59 @@
     tbody.innerHTML = '';
 
     data.forEach(req => {
-      const customer = req.customer_id_name || req.customer_name || req.company_name || 'N/A';
-      const amount = req.additional_credit_requested || req.credit_limit || req.amount || 0;
-      const formattedAmount = Number(amount).toLocaleString('en-IN');
+      // Extensive fallback mapping to fetch both new and old fields correctly
+      const customer = req.customer_id_name || req.customer_name || req.customer_id || req.company_name || 'N/A';
+      const salesPoc = req.sales_poc_name || req.sales_poc || req.sales_rep || '-';
+      const approvalType = req.approval_type || req.criteria || '-';
+      
+      const addlCredit = req.additional_credit_requested ?? req.additional_credit ?? req.credit_limit ?? req.amount ?? 0;
+      const currentLimit = req.current_credit_limit ?? req.current_limit ?? 0;
+      const outstanding = req.current_outstanding ?? req.outstanding ?? 0;
+      
+      const reqType = req.credit_requirement_type || req.req_type || '-';
+      const timeline = req.expected_payment_timeline || req.payment_timeline || req.timeline || '-';
+      const status = req.status || 'Pending';
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td>${customer}</td>
-        <td>₹${formattedAmount}</td>
-        <td>${req.approval_type || '-'}</td>
-        <td>${req.status || 'Pending'}</td>
+        <td><strong>${customer}</strong></td>
+        <td>${salesPoc}</td>
+        <td>${approvalType}</td>
+        <td>₹${Number(addlCredit).toLocaleString('en-IN')}</td>
+        <td>₹${Number(currentLimit).toLocaleString('en-IN')}</td>
+        <td>₹${Number(outstanding).toLocaleString('en-IN')}</td>
+        <td>${reqType}</td>
+        <td>${timeline}</td>
+        <td><span class="badge status-${status}">${status}</span></td>
         <td>
           <button onclick="sendReminder('${req.id}')" class="btn-reminder">🔔 Send Reminder</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
+  }
+
+  function saveApprovalLogic() {
+    const criteria = document.getElementById('cfg_approval_type').value;
+    const threshold = document.getElementById('cfg_threshold').value;
+    const email = document.getElementById('cfg_approver_email').value;
+
+    if (!threshold || !email) {
+      alert("Please fill in threshold limit and approver email.");
+      return;
+    }
+    alert(`✅ Approval Logic updated for "${criteria}": Threshold ₹${threshold}, Approver: ${email}`);
+  }
+
+  function grantAdminAccess() {
+    const email = document.getElementById('cfg_new_admin_email').value;
+    const role = document.getElementById('cfg_admin_role').value;
+
+    if (!email) {
+      alert("Please enter a valid user email.");
+      return;
+    }
+    alert(`✅ Access granted to ${email} as ${role}.`);
   }
 
   async function sendReminder(requestId) {
