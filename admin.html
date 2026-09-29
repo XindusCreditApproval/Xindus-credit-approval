@@ -176,11 +176,8 @@
           <th>Customer ID / Name</th>
           <th>Sales POC</th>
           <th>Approval Criteria</th>
-          <th>Add'l Credit (₹)</th>
-          <th>Current Limit (₹)</th>
-          <th>Outstanding (₹)</th>
-          <th>Req Type</th>
-          <th>Timeline</th>
+          <th>Credit Requested (₹)</th>
+          <th>Approver Email</th>
           <th>Status</th>
           <th>Action</th>
         </tr>
@@ -411,12 +408,8 @@
       const salesPoc = req.sales_poc_name || req.sales_poc || req.sales_rep || '-';
       const approvalType = req.approval_type || req.criteria || '-';
       
-      const addlCredit = req.additional_credit_requested ?? req.additional_credit ?? req.credit_limit ?? req.amount ?? 0;
-      const currentLimit = req.current_credit_limit ?? req.current_limit ?? 0;
-      const outstanding = req.current_outstanding ?? req.outstanding ?? 0;
-      
-      const reqType = req.credit_requirement_type || req.req_type || '-';
-      const timeline = req.expected_payment_timeline || req.payment_timeline || req.timeline || '-';
+      const creditRequested = req.additional_credit_requested ?? req.additional_credit ?? req.credit_limit ?? req.amount ?? 0;
+      const approverEmail = req.approver_email || req.assigned_approver || '-';
       const status = req.status || 'Pending';
 
       const tr = document.createElement('tr');
@@ -424,11 +417,8 @@
         <td><strong>${customer}</strong></td>
         <td>${salesPoc}</td>
         <td>${approvalType}</td>
-        <td>₹${Number(addlCredit).toLocaleString('en-IN')}</td>
-        <td>₹${Number(currentLimit).toLocaleString('en-IN')}</td>
-        <td>₹${Number(outstanding).toLocaleString('en-IN')}</td>
-        <td>${reqType}</td>
-        <td>${timeline}</td>
+        <td>₹${Number(creditRequested).toLocaleString('en-IN')}</td>
+        <td>${approverEmail}</td>
         <td><span class="badge status-${status}">${status}</span></td>
         <td>
           <button onclick="sendReminder('${req.id}')" class="btn btn-reminder">🔔 Send Reminder</button>
