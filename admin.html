@@ -4,7 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xindus Credit Approval Admin Dashboard</title>
-  <!-- Supabase JS Client v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
@@ -12,14 +11,18 @@
     .card { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin-bottom: 25px; }
     h2, h3 { color: #1b5e20; margin-top: 0; }
     
+    .login-overlay { display: flex; justify-content: center; align-items: center; min-height: 80vh; }
+    .login-card { background: #fff; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.15); width: 100%; max-width: 400px; text-align: center; }
+    
     .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 15px; background: #f9f9f9; padding: 15px; border-radius: 6px; border: 1px solid #e0e0e0; }
-    .form-group { flex: 1; min-width: 160px; }
+    .form-group { flex: 1; min-width: 160px; text-align: left; }
     label { font-weight: bold; display: block; margin-bottom: 5px; font-size: 12px; color: #333; }
     input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 13px; }
     
-    .btn { padding: 8px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
-    .btn-primary { background-color: #1b5e20; color: white; }
+    .btn { padding: 9px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+    .btn-primary { background-color: #1b5e20; color: white; width: 100%; }
     .btn-primary:hover { background-color: #144817; }
+    .btn-inline { width: auto; }
     .btn-edit { background-color: #0288d1; color: white; margin-right: 4px; }
     .btn-delete { background-color: #d32f2f; color: white; }
     .btn-reminder { background-color: #ff9800; color: white; }
@@ -33,15 +36,44 @@
     .status-Pending { background-color: #fff3cd; color: #856404; }
     .status-Rejected { background-color: #f8d7da; color: #721c24; }
     .header-action { display: flex; justify-content: space-between; align-items: center; }
+    .user-info { font-size: 13px; color: #555; display: flex; align-items: center; gap: 10px; }
   </style>
 </head>
 <body>
 
-<div class="container">
+<!-- LOGIN SECTION -->
+<div id="loginSection" class="login-overlay">
+  <div class="login-card">
+    <h2>🔒 Admin Portal Access</h2>
+    <p style="font-size: 13px; color: #666; margin-bottom: 20px;">Restricted access. Only authorized admin emails allowed.</p>
+    
+    <div id="emailStep">
+      <div class="form-group" style="margin-bottom: 15px;">
+        <label>Enter Admin Email Address</label>
+        <input type="email" id="loginEmail" placeholder="vikas.p@xindus.net" required />
+      </div>
+      <button class="btn btn-primary" onclick="verifyAdminEmail()">Verify & Enter Admin Portal</button>
+    </div>
+
+    <p id="loginMessage" style="font-size: 12px; margin-top: 15px; font-weight: bold;"></p>
+  </div>
+</div>
+
+<!-- MAIN DASHBOARD CONTENT -->
+<div id="dashboardContent" class="container" style="display: none;">
+
+  <!-- Header Bar -->
+  <div class="card header-action" style="padding: 12px 20px;">
+    <h2>💼 Xindus Admin Control Center</h2>
+    <div class="user-info">
+      <span>Logged in as: <strong id="currentUserEmail">vikas.p@xindus.net</strong></span>
+      <button class="btn btn-delete btn-inline" onclick="logout()">Logout</button>
+    </div>
+  </div>
 
   <!-- SECTION 1: Approval Logic & Matrix Thresholds Config -->
   <div class="card">
-    <h2>⚙️ Approval Logic & Matrix Thresholds Config</h2>
+    <h2>⚙️ 1. Approval Logic & Matrix Thresholds Config</h2>
     
     <form id="matrixForm" onsubmit="handleMatrixSubmit(event)">
       <input type="hidden" id="editIndex" value="-1" />
@@ -76,8 +108,8 @@
           <input type="email" id="m_cc_email" placeholder="manager@xindus.com" required />
         </div>
       </div>
-      <button type="submit" id="saveMatrixBtn" class="btn btn-primary">➕ Add Logic Row</button>
-      <button type="button" id="cancelEditBtn" class="btn" style="display:none;" onclick="resetMatrixForm()">Cancel Edit</button>
+      <button type="submit" id="saveMatrixBtn" class="btn btn-primary btn-inline">➕ Add Logic Row</button>
+      <button type="button" id="cancelEditBtn" class="btn btn-inline" style="display:none;" onclick="resetMatrixForm()">Cancel Edit</button>
     </form>
 
     <!-- Matrix Table -->
@@ -101,29 +133,37 @@
 
   <!-- SECTION 2: Admin Access Management -->
   <div class="card">
-    <h3>⚙️ Admin Access Management</h3>
-    <div style="display: flex; gap: 15px; align-items: flex-end;">
-      <div class="form-group" style="max-width: 300px;">
-        <label>New Admin User Email</label>
+    <h3>⚙️ 2. Admin Access Management</h3>
+    <p style="font-size: 12px; color: #666;">Yahan se aap kisi bhi nayi Email ko Admin Portal ka access de sakte hain.</p>
+    <div style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 15px;">
+      <div class="form-group" style="max-width: 350px;">
+        <label>New Admin User Email *</label>
         <input type="email" id="cfg_new_admin_email" placeholder="user@xindus.com" />
       </div>
-      <div class="form-group" style="max-width: 200px;">
-        <label>Role / Access Level</label>
-        <select id="cfg_admin_role">
-          <option value="Super Admin">Super Admin</option>
-          <option value="Manager / Approver">Manager / Approver</option>
-          <option value="View Only">View Only</option>
-        </select>
-      </div>
-      <button class="btn btn-primary" onclick="grantAdminAccess()">Grant Admin Access</button>
+      <button class="btn btn-primary btn-inline" onclick="grantAdminAccess()">Grant Admin Access</button>
     </div>
+
+    <!-- Active Admins List -->
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Authorized Admin Email</th>
+          <th>Added On</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="adminsTableBody">
+        <!-- Active Admin Rows -->
+      </tbody>
+    </table>
   </div>
 
   <!-- SECTION 3: Approval Requests Tracking -->
   <div class="card">
     <div class="header-action">
-      <h2>📊 Approval Requests Tracking</h2>
-      <button class="btn btn-primary" onclick="fetchRequests()">🔄 Refresh Data</button>
+      <h2>📊 3. Approval Requests Tracking</h2>
+      <button class="btn btn-primary btn-inline" onclick="fetchRequests()">🔄 Refresh Data</button>
     </div>
 
     <table>
@@ -151,18 +191,64 @@
 
 <script>
   const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
-  
-  // ⚠️ NOTE: Paste the key starting with "eyJhbGciOi..." from the "Legacy anon" tab here
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
-  
+  const SUPABASE_ANON_KEY = 'sb_publishable_j0edpjipxRUlzsisHeIyqg_4gWCjqNM';
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  let currentUser = localStorage.getItem('xindus_active_admin');
+
+  // --- AUTHENTICATION CHECK ---
+  async function verifyAdminEmail() {
+    const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const msg = document.getElementById('loginMessage');
+    
+    if (!email) {
+      msg.style.color = "red";
+      msg.innerText = "Please enter an email address.";
+      return;
+    }
+
+    msg.style.color = "#333";
+    msg.innerText = "Verifying access rights...";
+
+    // Check directly in allowed_admins table
+    const { data: allowed, error } = await supabaseClient
+      .from('allowed_admins')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error || !allowed) {
+      msg.style.color = "red";
+      msg.innerText = "❌ Access Denied: This email is not authorized as Admin.";
+      return;
+    }
+
+    loginSuccess(email);
+  }
+
+  function loginSuccess(email) {
+    localStorage.setItem('xindus_active_admin', email);
+    document.getElementById('loginSection').style.display = 'none';
+    document.getElementById('dashboardContent').style.display = 'block';
+    document.getElementById('currentUserEmail').innerText = email;
+    
+    renderMatrixTable();
+    fetchAdminsList();
+    fetchRequests();
+  }
+
+  function logout() {
+    localStorage.removeItem('xindus_active_admin');
+    location.reload();
+  }
+
+  // --- SECTION 1: MATRIX THRESHOLDS ---
   let matrixData = JSON.parse(localStorage.getItem('xindus_approval_matrix')) || [
     {
       criteria: 'Credit Limit Extension',
       amountFrom: 0,
       amountTo: 50000,
-      approverName: 'Finance Lead',
+      approverName: 'Finance Manager',
       approverEmail: 'approver@xindus.com',
       ccEmail: 'finance@xindus.com'
     }
@@ -243,6 +329,55 @@
     document.getElementById('cancelEditBtn').style.display = 'none';
   }
 
+  // --- SECTION 2: ADMIN ACCESS MANAGEMENT ---
+  async function fetchAdminsList() {
+    const { data, error } = await supabaseClient.from('allowed_admins').select('*').order('id', { ascending: true });
+    const tbody = document.getElementById('adminsTableBody');
+    tbody.innerHTML = '';
+
+    if (data) {
+      data.forEach(adm => {
+        const tr = document.createElement('tr');
+        const formattedDate = adm.created_at ? new Date(adm.created_at).toLocaleDateString() : '-';
+        tr.innerHTML = `
+          <td>${adm.id}</td>
+          <td><strong>${adm.email}</strong></td>
+          <td>${formattedDate}</td>
+          <td>
+            ${adm.email !== 'vikas.p@xindus.net' ? `<button class="btn btn-delete" onclick="revokeAdminAccess('${adm.id}')">Revoke Access</button>` : '<em>Main Owner</em>'}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+
+  async function grantAdminAccess() {
+    const email = document.getElementById('cfg_new_admin_email').value.trim().toLowerCase();
+
+    if (!email) {
+      alert("Please enter a valid email address.");
+      return;
+    }
+
+    const { error } = await supabaseClient.from('allowed_admins').insert([{ email }]);
+    if (error) {
+      alert("Error adding admin: " + error.message);
+    } else {
+      alert(`✅ Access granted to ${email}.`);
+      document.getElementById('cfg_new_admin_email').value = '';
+      fetchAdminsList();
+    }
+  }
+
+  async function revokeAdminAccess(id) {
+    if (confirm("Are you sure you want to revoke admin access for this user?")) {
+      await supabaseClient.from('allowed_admins').delete().eq('id', id);
+      fetchAdminsList();
+    }
+  }
+
+  // --- SECTION 3: REQUESTS TRACKING ---
   async function fetchRequests() {
     const { data, error } = await supabaseClient
       .from('approval_requests')
@@ -250,7 +385,7 @@
       .order('created_at', { ascending: false });
 
     if (error) {
-      alert("Error fetching data: " + error.message);
+      alert("Error fetching tracking data: " + error.message);
       return;
     }
 
@@ -289,17 +424,6 @@
     });
   }
 
-  function grantAdminAccess() {
-    const email = document.getElementById('cfg_new_admin_email').value;
-    const role = document.getElementById('cfg_admin_role').value;
-
-    if (!email) {
-      alert("Please enter a valid user email.");
-      return;
-    }
-    alert(`✅ Access granted to ${email} as ${role}.`);
-  }
-
   async function sendReminder(requestId) {
     if (!confirm("Are you sure you want to send a reminder email?")) return;
 
@@ -313,20 +437,21 @@
         body: JSON.stringify({ id: requestId, isReminder: true })
       });
 
-      const result = await response.json();
       if (response.ok) {
         alert("✅ REMINDER EMAIL successfully dispatched to approver!");
       } else {
-        alert("❌ Failed to send reminder: " + JSON.stringify(result));
+        alert("❌ Failed to send reminder.");
       }
     } catch (err) {
       alert("Error: " + err.message);
     }
   }
 
+  // AUTO LOGIN CHECK ON LOAD
   window.onload = function() {
-    renderMatrixTable();
-    fetchRequests();
+    if (currentUser) {
+      loginSuccess(currentUser);
+    }
   };
 </script>
 
