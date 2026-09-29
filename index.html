@@ -6,22 +6,40 @@
     <title>Xindus - Credit Approval Request</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        * { box-sizing: border-box; }
         body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
         .container { max-width: 680px; background: #ffffff; padding: 30px; border-radius: 8px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h2 { color: #1e5631; margin-top: 0; text-align: center; }
         .sub-text { font-size: 13px; color: #666; text-align: center; margin-bottom: 20px; }
-        .form-section { background: #f9fbf9; border: 1px solid #dcdcdc; border-top: 4px solid #1e5631; padding: 18px; border-radius: 6px; margin-bottom: 20px; }
+        
+        .form-section { 
+            background: #f9fbf9; 
+            border: 1px solid #dcdcdc; 
+            border-top: 4px solid #1e5631; 
+            padding: 18px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
+            display: none; /* Default hidden */
+        }
+        
         .form-group { margin-bottom: 16px; }
         label { display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 6px; }
-        input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
+            font-size: 14px; 
+        }
         textarea { resize: vertical; height: 80px; }
         .radio-group label { font-weight: normal; display: inline-block; margin-right: 15px; cursor: pointer; }
+        
         button { width: 100%; padding: 12px; background-color: #1e5631; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
         button:hover { background-color: #143d22; }
+        
         .status-msg { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; text-align: center; font-weight: bold; font-size: 13px; }
         .error { background-color: #ffe6e6; color: #d9534f; border: 1px solid #f5c6cb; }
         .success { background-color: #e6ffed; color: #28a745; border: 1px solid #c3e6cb; }
-        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -40,7 +58,7 @@
         <!-- Approval Criteria Selector -->
         <div class="form-group">
             <label>Approval Criteria / Reason *</label>
-            <select id="approvalCriteria" required onchange="toggleCriteriaSections()">
+            <select id="approvalCriteria" required>
                 <option value="">-- Select Criteria --</option>
                 <option value="Credit Limit Extension">Credit Limit Extension</option>
                 <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection - Credit Limit Exception</option>
@@ -49,7 +67,7 @@
         </div>
 
         <!-- SECTION 1: Credit Limit Extension -->
-        <div id="sec_extension" class="form-section hidden">
+        <div id="sec_extension" class="form-section">
             <div class="form-group">
                 <label>What is the primary reason for this credit limit enhancement request? *</label>
                 <select id="primaryReason">
@@ -98,7 +116,7 @@
         </div>
 
         <!-- SECTION 2: Insurer Rejection -->
-        <div id="sec_rejection" class="form-section hidden">
+        <div id="sec_rejection" class="form-section">
             <div class="form-group">
                 <label>Customer Name *</label>
                 <input type="text" id="rej_customerName">
@@ -137,7 +155,7 @@
         </div>
 
         <!-- SECTION 3: Temporary Credit Approval -->
-        <div id="sec_temp" class="form-section hidden">
+        <div id="sec_temp" class="form-section">
             <div class="form-group">
                 <label>Customer Name *</label>
                 <input type="text" id="temp_customerName">
@@ -186,20 +204,27 @@
     
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    function toggleCriteriaSections() {
-        const selected = document.getElementById('approvalCriteria').value;
-        document.getElementById('sec_extension').classList.add('hidden');
-        document.getElementById('sec_rejection').classList.add('hidden');
-        document.getElementById('sec_temp').classList.add('hidden');
+    const criteriaSelect = document.getElementById('approvalCriteria');
+    const secExtension = document.getElementById('sec_extension');
+    const secRejection = document.getElementById('sec_rejection');
+    const secTemp = document.getElementById('sec_temp');
 
-        if (selected === 'Credit Limit Extension') {
-            document.getElementById('sec_extension').classList.remove('hidden');
-        } else if (selected === 'Insurer Rejection - Credit Limit Exception') {
-            document.getElementById('sec_rejection').classList.remove('hidden');
-        } else if (selected === 'Temporary Credit Approval - Insurer Limit Under Process') {
-            document.getElementById('sec_temp').classList.remove('hidden');
+    function updateSections() {
+        const val = criteriaSelect.value;
+        secExtension.style.display = 'none';
+        secRejection.style.display = 'none';
+        secTemp.style.display = 'none';
+
+        if (val === 'Credit Limit Extension') {
+            secExtension.style.display = 'block';
+        } else if (val === 'Insurer Rejection - Credit Limit Exception') {
+            secRejection.style.display = 'block';
+        } else if (val === 'Temporary Credit Approval - Insurer Limit Under Process') {
+            secTemp.style.display = 'block';
         }
     }
+
+    criteriaSelect.addEventListener('change', updateSections);
 
     document.getElementById('creditForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -212,7 +237,7 @@
         statusMsg.style.display = 'none';
 
         const submitterEmail = document.getElementById('submitterEmail').value.trim();
-        const criteria = document.getElementById('approvalCriteria').value;
+        const criteria = criteriaSelect.value;
 
         if (!criteria) {
             alert("Please select Approval Criteria!");
@@ -227,7 +252,6 @@
             status: 'Pending'
         };
 
-        // Extract values based on chosen criteria
         if (criteria === 'Credit Limit Extension') {
             payload.primary_reason = document.getElementById('primaryReason').value;
             payload.request_date = document.getElementById('ext_requestDate').value || null;
@@ -262,7 +286,6 @@
         }
 
         try {
-            // Fetch Approver Email & Matrix CC from 'approval_logic' table
             let approverEmail = 'default-approver@xindus.net';
             let matrixCcEmail = '';
 
@@ -282,7 +305,6 @@
             payload.approver_email = approverEmail;
             payload.cc_emails = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
 
-            // Submit to Supabase
             const { error: insertError } = await supabase
                 .from('approval_requests')
                 .insert([payload]);
@@ -290,10 +312,10 @@
             if (insertError) throw insertError;
 
             statusMsg.className = 'status-msg success';
-            statusMsg.innerText = '✅ Request submitted successfully! Submitter CC added.';
+            statusMsg.innerText = '✅ Request submitted successfully!';
             statusMsg.style.display = 'block';
             document.getElementById('creditForm').reset();
-            toggleCriteriaSections();
+            updateSections();
 
         } catch (err) {
             statusMsg.className = 'status-msg error';
