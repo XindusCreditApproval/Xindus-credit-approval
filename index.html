@@ -19,11 +19,11 @@
             padding: 18px; 
             border-radius: 6px; 
             margin-bottom: 20px; 
-            display: none !important; /* Force hide by default */
+            display: none !important;
         }
         
         .form-section.active-section {
-            display: block !important; /* Only active section will show */
+            display: block !important;
         }
         
         .form-group { margin-bottom: 16px; }
@@ -203,10 +203,11 @@
 </div>
 
 <script>
+    // Single Declaration for Supabase Client
     const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
     
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const criteriaSelect = document.getElementById('approvalCriteria');
     const secExtension = document.getElementById('sec_extension');
@@ -293,7 +294,7 @@
             let approverEmail = 'default-approver@xindus.net';
             let matrixCcEmail = '';
 
-            const { data: matrixData } = await supabase
+            const { data: matrixData } = await dbClient
                 .from('approval_logic')
                 .select('*')
                 .eq('criteria', criteria)
@@ -309,7 +310,7 @@
             payload.approver_email = approverEmail;
             payload.cc_emails = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
 
-            const { error: insertError } = await supabase
+            const { error: insertError } = await dbClient
                 .from('approval_requests')
                 .insert([payload]);
 
