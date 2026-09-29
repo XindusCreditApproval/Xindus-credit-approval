@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Xindus Credit Approval Admin Dashboard</title>
-  <!-- Supabase JS Client -->
+  <!-- Supabase JS Client v2 -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f8; }
@@ -94,7 +94,7 @@
         </tr>
       </thead>
       <tbody id="matrixTableBody">
-        <!-- Dynamic Rows -->
+        <!-- Dynamic Matrix Rows -->
       </tbody>
     </table>
   </div>
@@ -150,18 +150,19 @@
 </div>
 
 <script>
-  // Valid Supabase Credentials with correct URL & Publishable API key
   const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
-  const SUPABASE_ANON_KEY = 'sb_publishable_j0edpjipxRUlzsisHeIyqg_4gWCjqNM';
+  
+  // ⚠️ NOTE: Paste the key starting with "eyJhbGciOi..." from the "Legacy anon" tab here
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
+  
   const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // Dynamic Matrix Storage
   let matrixData = JSON.parse(localStorage.getItem('xindus_approval_matrix')) || [
     {
       criteria: 'Credit Limit Extension',
       amountFrom: 0,
       amountTo: 50000,
-      approverName: 'Finance Manager',
+      approverName: 'Finance Lead',
       approverEmail: 'approver@xindus.com',
       ccEmail: 'finance@xindus.com'
     }
@@ -257,7 +258,6 @@
     tbody.innerHTML = '';
 
     data.forEach(req => {
-      // Extended fallbacks to support legacy and current schema
       const customer = req.customer_id_name || req.customer_name || req.customer_id || req.company_name || 'N/A';
       const salesPoc = req.sales_poc_name || req.sales_poc || req.sales_rep || '-';
       const approvalType = req.approval_type || req.criteria || '-';
