@@ -19,7 +19,11 @@
             padding: 18px; 
             border-radius: 6px; 
             margin-bottom: 20px; 
-            display: none; /* Default hidden */
+            display: none !important; /* Force hide by default */
+        }
+        
+        .form-section.active-section {
+            display: block !important; /* Only active section will show */
         }
         
         .form-group { margin-bottom: 16px; }
@@ -52,7 +56,7 @@
         <!-- Submitter Email -->
         <div class="form-group">
             <label>Your Email Address (Form Submitter) *</label>
-            <input type="email" id="submitterEmail" placeholder="e.g. vikas.p@xindus.net" required>
+            <input type="email" id="submitterEmail" placeholder="vikas.p@xindus.net" required>
         </div>
 
         <!-- Approval Criteria Selector -->
@@ -99,7 +103,7 @@
             </div>
             <div class="form-group">
                 <label>Ageing of Overdue *</label>
-                <input type="text" id="ext_ageingOverdue" placeholder="e.g. 15 Days">
+                <input type="text" id="ext_ageingOverdue">
             </div>
             <div class="form-group">
                 <label>Tentative Clearance Date *</label>
@@ -150,7 +154,7 @@
             </div>
             <div class="form-group">
                 <label>Expected Payment Timeline *</label>
-                <input type="text" id="rej_paymentTimeline" placeholder="e.g. 30 Days">
+                <input type="text" id="rej_paymentTimeline">
             </div>
         </div>
 
@@ -211,16 +215,16 @@
 
     function updateSections() {
         const val = criteriaSelect.value;
-        secExtension.style.display = 'none';
-        secRejection.style.display = 'none';
-        secTemp.style.display = 'none';
+        secExtension.classList.remove('active-section');
+        secRejection.classList.remove('active-section');
+        secTemp.classList.remove('active-section');
 
         if (val === 'Credit Limit Extension') {
-            secExtension.style.display = 'block';
+            secExtension.classList.add('active-section');
         } else if (val === 'Insurer Rejection - Credit Limit Exception') {
-            secRejection.style.display = 'block';
+            secRejection.classList.add('active-section');
         } else if (val === 'Temporary Credit Approval - Insurer Limit Under Process') {
-            secTemp.style.display = 'block';
+            secTemp.classList.add('active-section');
         }
     }
 
