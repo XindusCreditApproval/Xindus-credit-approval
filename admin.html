@@ -77,10 +77,10 @@
 
   <!-- SECTION 1: Approval Logic & Matrix Thresholds Config -->
   <div class="card">
-    <h2>⚙️ 1. Approval Logic & Matrix Thresholds Config</h2>
+    <h2>⚙️️ 1. Approval Logic & Matrix Thresholds Config</h2>
     
     <form id="matrixForm" onsubmit="handleMatrixSubmit(event)">
-      <input type="hidden" id="editIndex" value="-1" />
+      <input type="hidden" id="editRowId" value="" />
       <div class="form-row">
         <div class="form-group">
           <label>Approval Criteria *</label>
@@ -88,7 +88,7 @@
             <option value="">-- Select Criteria --</option>
             <option value="Credit Limit Extension">Credit Limit Extension</option>
             <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection - Credit Limit Exception</option>
-            <option value="Temporary Credit - Insurer Approval Under Process">Temporary Credit - Insurer Approval Under Process</option>
+            <option value="Temporary Credit Approval - Insurer Limit Under Process">Temporary Credit Approval - Insurer Limit Under Process</option>
           </select>
         </div>
         <div class="form-group">
@@ -105,11 +105,11 @@
         </div>
         <div class="form-group">
           <label>Approver Email *</label>
-          <input type="email" id="m_approver_email" placeholder="" required />
+          <input type="email" id="m_approver_email" placeholder="approver@xindus.net" required />
         </div>
         <div class="form-group">
-          <label>CC Email *</label>
-          <input type="email" id="m_cc_email" placeholder="" required />
+          <label>CC Email</label>
+          <input type="email" id="m_cc_email" placeholder="cc@xindus.net" />
         </div>
       </div>
       <button type="submit" id="saveMatrixBtn" class="btn btn-primary btn-inline">➕ Add Logic Row</button>
@@ -142,7 +142,7 @@
     <div style="display: flex; gap: 15px; align-items: flex-end; margin-bottom: 15px;">
       <div class="form-group" style="max-width: 350px;">
         <label>New Admin User Email *</label>
-        <input type="email" id="cfg_new_admin_email" placeholder="" />
+        <input type="email" id="cfg_new_admin_email" placeholder="admin@xindus.net" />
       </div>
       <button class="btn btn-primary btn-inline" onclick="grantAdminAccess()">Grant Admin Access</button>
     </div>
@@ -212,7 +212,6 @@
 
   async function checkAdminAuthorization() {
     const msg = document.getElementById('loginMessage');
-
     const { data: { session } } = await supabaseClient.auth.getSession();
 
     if (!session || !session.user || !session.user.email) {
@@ -244,7 +243,7 @@
       document.getElementById('dashboardContent').style.display = 'block';
       document.getElementById('currentUserEmail').innerText = authenticatedEmail;
 
-      renderMatrixTable();
+      fetchMatrixData();
       fetchAdminsList();
       fetchRequests();
     } else {
@@ -262,85 +261,111 @@
     location.reload();
   }
 
-  // MATRIX LOGIC
-  let matrixData = JSON.parse(localStorage.getItem('xindus_approval_matrix')) || [];
+  // LIVE SUPABASE MATRIX LOGIC
+  let matrixData = [];
+
+  async function fetchMatrixData() {
+    const { data, error } = await supabaseClient
+      .from('approval_logic')
+      .select('*')
+      .order('id', { ascending: true });
+
+    if (error) {
+      console.error("Error loading matrix:", error.message);
+      return;
+    }
+
+    matrixData = data || [];
+    renderMatrixTable();
+  }
 
   function renderMatrixTable() {
     const tbody = document.getElementById('matrixTableBody');
     tbody.innerHTML = '';
 
-    matrixData.forEach((row, index) => {
+    matrixData.forEach((row) => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${row.criteria}</strong></td>
-        <td>₹${Number(row.amountFrom).toLocaleString('en-IN')}</td>
-        <td>₹${Number(row.amountTo).toLocaleString('en-IN')}</td>
-        <td>${row.approverName}</td>
-        <td>${row.approverEmail}</td>
-        <td>${row.ccEmail}</td>
+        <td><strong>${row.approval_criteria || row.criteria || '-'}</strong></td>
+        <td>₹${Number(row.amount_from || 0).toLocaleString('en-IN')}</td>
+        <td>₹${Number(row.amount_to || 0).toLocaleString('en-IN')}</td>
+        <td>${row.approver_name || '-'}</td>
+        <td>${row.approver_email || '-'}</td>
+        <td>${row.cc_email || '-'}</td>
         <td>
-          <button class="btn btn-edit" onclick="editMatrixRow(${index})">Edit</button>
-          <button class="btn btn-delete" onclick="deleteMatrixRow(${index})">Delete</button>
+          <button class="btn btn-edit" onclick="editMatrixRow('${row.id}')">Edit</button>
+          <button class="btn btn-delete" onclick="deleteMatrixRow('${row.id}')">Delete</button>
         </td>
       `;
       tbody.appendChild(tr);
     });
-
-    localStorage.setItem('xindus_approval_matrix', JSON.stringify(matrixData));
   }
 
-  function handleMatrixSubmit(event) {
+  async function handleMatrixSubmit(event) {
     event.preventDefault();
-    const editIndex = parseInt(document.getElementById('editIndex').value);
+    const rowId = document.getElementById('editRowId').value;
 
     const rowObj = {
+      approval_criteria: document.getElementById('m_criteria').value,
       criteria: document.getElementById('m_criteria').value,
-      amountFrom: parseFloat(document.getElementById('m_amount_from').value),
-      amountTo: parseFloat(document.getElementById('m_amount_to').value),
-      approverName: document.getElementById('m_approver_name').value,
-      approverEmail: document.getElementById('m_approver_email').value,
-      ccEmail: document.getElementById('m_cc_email').value
+      amount_from: parseFloat(document.getElementById('m_amount_from').value),
+      amount_to: parseFloat(document.getElementById('m_amount_to').value),
+      approver_name: document.getElementById('m_approver_name').value,
+      approver_email: document.getElementById('m_approver_email').value,
+      cc_email: document.getElementById('m_cc_email').value
     };
 
-    if (editIndex >= 0) {
-      matrixData[editIndex] = rowObj;
+    let result;
+    if (rowId) {
+      result = await supabaseClient.from('approval_logic').update(rowObj).eq('id', rowId);
     } else {
-      matrixData.push(rowObj);
+      result = await supabaseClient.from('approval_logic').insert([rowObj]);
     }
 
-    renderMatrixTable();
-    resetMatrixForm();
+    if (result.error) {
+      alert("Error saving logic row: " + result.error.message);
+    } else {
+      alert("✅ Matrix updated successfully!");
+      resetMatrixForm();
+      fetchMatrixData();
+    }
   }
 
-  function editMatrixRow(index) {
-    const row = matrixData[index];
-    document.getElementById('editIndex').value = index;
-    document.getElementById('m_criteria').value = row.criteria;
-    document.getElementById('m_amount_from').value = row.amountFrom;
-    document.getElementById('m_amount_to').value = row.amountTo;
-    document.getElementById('m_approver_name').value = row.approverName;
-    document.getElementById('m_approver_email').value = row.approverEmail;
-    document.getElementById('m_cc_email').value = row.ccEmail;
+  function editMatrixRow(id) {
+    const row = matrixData.find(r => String(r.id) === String(id));
+    if (!row) return;
+
+    document.getElementById('editRowId').value = row.id;
+    document.getElementById('m_criteria').value = row.approval_criteria || row.criteria || '';
+    document.getElementById('m_amount_from').value = row.amount_from;
+    document.getElementById('m_amount_to').value = row.amount_to;
+    document.getElementById('m_approver_name').value = row.approver_name || '';
+    document.getElementById('m_approver_email').value = row.approver_email || '';
+    document.getElementById('m_cc_email').value = row.cc_email || '';
 
     document.getElementById('saveMatrixBtn').innerText = '💾 Update Logic Row';
     document.getElementById('cancelEditBtn').style.display = 'inline-block';
   }
 
-  function deleteMatrixRow(index) {
+  async function deleteMatrixRow(id) {
     if (confirm("Are you sure you want to delete this threshold row?")) {
-      matrixData.splice(index, 1);
-      renderMatrixTable();
+      const { error } = await supabaseClient.from('approval_logic').delete().eq('id', id);
+      if (error) {
+        alert("Error deleting row: " + error.message);
+      } else {
+        fetchMatrixData();
+      }
     }
   }
 
   function resetMatrixForm() {
     document.getElementById('matrixForm').reset();
-    document.getElementById('editIndex').value = '-1';
+    document.getElementById('editRowId').value = '';
     document.getElementById('saveMatrixBtn').innerText = '➕ Add Logic Row';
     document.getElementById('cancelEditBtn').style.display = 'none';
   }
 
-  // ADMIN MANAGEMENT
+  // ADMIN ACCESS MANAGEMENT
   async function fetchAdminsList() {
     const { data, error } = await supabaseClient.from('allowed_admins').select('*').order('id', { ascending: true });
     const tbody = document.getElementById('adminsTableBody');
@@ -404,11 +429,11 @@
     tbody.innerHTML = '';
 
     data.forEach(req => {
-      const customer = req.customer_id_name || req.customer_name || req.customer_id || req.company_name || 'N/A';
+      const customer = req.customer_id || req.customer_name || req.customer_id_name || req.company_name || 'N/A';
       const salesPoc = req.sales_poc_name || req.sales_poc || req.sales_rep || '-';
-      const approvalType = req.approval_type || req.criteria || '-';
+      const approvalType = req.approval_criteria || req.criteria || req.approval_type || '-';
       
-      const creditRequested = req.additional_credit_requested ?? req.additional_credit ?? req.credit_limit ?? req.amount ?? 0;
+      const creditRequested = req.credit_limit_required ?? req.additional_credit_requested ?? req.credit_limit ?? req.amount ?? 0;
       const approverEmail = req.approver_email || req.assigned_approver || '-';
       const status = req.status || 'Pending';
 
