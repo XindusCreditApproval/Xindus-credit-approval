@@ -52,11 +52,11 @@
     <h2>📋 Credit Approval Request Form</h2>
     <p class="sub-text">Please fill in the required details to submit a credit limit request.</p>
 
-    <form id="creditForm">
+    <form id="creditForm" autocomplete="off">
         <!-- Submitter Email -->
         <div class="form-group">
             <label>Your Email Address (Form Submitter) *</label>
-            <input type="email" id="submitterEmail" placeholder="vikas.p@xindus.net" required>
+            <input type="email" id="submitterEmail" autocomplete="off" required>
         </div>
 
         <!-- Approval Criteria Selector -->
@@ -203,134 +203,135 @@
 </div>
 
 <script>
-    // Single Declaration for Supabase Client
-    const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
-    
-    const dbClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-    const criteriaSelect = document.getElementById('approvalCriteria');
-    const secExtension = document.getElementById('sec_extension');
-    const secRejection = document.getElementById('sec_rejection');
-    const secTemp = document.getElementById('sec_temp');
-
-    function updateSections() {
-        const val = criteriaSelect.value;
-        secExtension.classList.remove('active-section');
-        secRejection.classList.remove('active-section');
-        secTemp.classList.remove('active-section');
-
-        if (val === 'Credit Limit Extension') {
-            secExtension.classList.add('active-section');
-        } else if (val === 'Insurer Rejection - Credit Limit Exception') {
-            secRejection.classList.add('active-section');
-        } else if (val === 'Temporary Credit Approval - Insurer Limit Under Process') {
-            secTemp.classList.add('active-section');
-        }
-    }
-
-    criteriaSelect.addEventListener('change', updateSections);
-
-    document.getElementById('creditForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+    (function() {
+        const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
         
-        const submitBtn = document.getElementById('submitBtn');
-        const statusMsg = document.getElementById('statusMsg');
-        
-        submitBtn.disabled = true;
-        submitBtn.innerText = 'Processing...';
-        statusMsg.style.display = 'none';
+        var dbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-        const submitterEmail = document.getElementById('submitterEmail').value.trim();
-        const criteria = criteriaSelect.value;
+        var criteriaSelect = document.getElementById('approvalCriteria');
+        var secExtension = document.getElementById('sec_extension');
+        var secRejection = document.getElementById('sec_rejection');
+        var secTemp = document.getElementById('sec_temp');
 
-        if (!criteria) {
-            alert("Please select Approval Criteria!");
-            submitBtn.disabled = false;
-            submitBtn.innerText = 'Submit Request';
-            return;
+        function updateSections() {
+            var val = criteriaSelect.value;
+            secExtension.classList.remove('active-section');
+            secRejection.classList.remove('active-section');
+            secTemp.classList.remove('active-section');
+
+            if (val === 'Credit Limit Extension') {
+                secExtension.classList.add('active-section');
+            } else if (val === 'Insurer Rejection - Credit Limit Exception') {
+                secRejection.classList.add('active-section');
+            } else if (val === 'Temporary Credit Approval - Insurer Limit Under Process') {
+                secTemp.classList.add('active-section');
+            }
         }
 
-        let payload = {
-            submitter_email: submitterEmail,
-            approval_criteria: criteria,
-            status: 'Pending'
-        };
+        criteriaSelect.addEventListener('change', updateSections);
 
-        if (criteria === 'Credit Limit Extension') {
-            payload.primary_reason = document.getElementById('primaryReason').value;
-            payload.request_date = document.getElementById('ext_requestDate').value || null;
-            payload.customer_id = document.getElementById('ext_customerName').value;
-            payload.current_credit_limit = parseFloat(document.getElementById('ext_currentCreditLimit').value || 0);
-            payload.sales_poc_name = document.getElementById('ext_salesKam').value;
-            payload.current_outstanding = parseFloat(document.getElementById('ext_currentOutstanding').value || 0);
-            payload.ageing_overdue = document.getElementById('ext_ageingOverdue').value;
-            payload.tentative_clearance_date = document.getElementById('ext_clearanceDate').value || null;
-            payload.overdue_amount = parseFloat(document.getElementById('ext_overdueAmount').value || 0);
-            payload.credit_limit_required = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
-        } 
-        else if (criteria === 'Insurer Rejection - Credit Limit Exception') {
-            payload.customer_id = document.getElementById('rej_customerName').value;
-            payload.sales_poc_name = document.getElementById('rej_salesPoc').value;
-            payload.credit_limit_required = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
-            payload.temp_or_ongoing = document.querySelector('input[name="rej_tempOngoing"]:checked')?.value || null;
-            payload.risk_losing_business = document.querySelector('input[name="rej_riskLosing"]:checked')?.value || null;
-            payload.willing_prepaid = document.querySelector('input[name="rej_prepaid"]:checked')?.value || null;
-            payload.reason_credit_required = document.getElementById('rej_whyCredit').value;
-            payload.expected_payment_timeline = document.getElementById('rej_paymentTimeline').value;
-        } 
-        else if (criteria === 'Temporary Credit Approval - Insurer Limit Under Process') {
-            payload.customer_id = document.getElementById('temp_customerName').value;
-            payload.sales_poc_name = document.getElementById('temp_salesPoc').value;
-            payload.customer_type = document.querySelector('input[name="temp_custType"]:checked')?.value || null;
-            payload.onboarding_date = document.getElementById('temp_onboardingDate').value || null;
-            payload.credit_limit_required = parseFloat(document.getElementById('temp_creditLimitRequired').value || 0);
-            payload.reason_credit_required = document.getElementById('temp_whyBeforeInsurer').value;
-            payload.first_payment_date = document.getElementById('temp_firstPaymentDate').value || null;
-            payload.block_after_expiry = document.querySelector('input[name="temp_blockExpiry"]:checked')?.value || null;
-        }
+        document.getElementById('creditForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            var submitBtn = document.getElementById('submitBtn');
+            var statusMsg = document.getElementById('statusMsg');
+            
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Processing...';
+            statusMsg.style.display = 'none';
 
-        try {
-            let approverEmail = 'default-approver@xindus.net';
-            let matrixCcEmail = '';
+            var submitterEmail = document.getElementById('submitterEmail').value.trim();
+            var criteria = criteriaSelect.value;
 
-            const { data: matrixData } = await dbClient
-                .from('approval_logic')
-                .select('*')
-                .eq('criteria', criteria)
-                .lte('amount_from', payload.credit_limit_required)
-                .gte('amount_to', payload.credit_limit_required)
-                .limit(1);
-
-            if (matrixData && matrixData.length > 0) {
-                approverEmail = matrixData[0].approver_email;
-                matrixCcEmail = matrixData[0].cc_email || '';
+            if (!criteria) {
+                alert("Please select Approval Criteria!");
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Submit Request';
+                return;
             }
 
-            payload.approver_email = approverEmail;
-            payload.cc_emails = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
+            var payload = {
+                submitter_email: submitterEmail,
+                approval_criteria: criteria,
+                status: 'Pending'
+            };
 
-            const { error: insertError } = await dbClient
-                .from('approval_requests')
-                .insert([payload]);
+            if (criteria === 'Credit Limit Extension') {
+                payload.primary_reason = document.getElementById('primaryReason').value;
+                payload.request_date = document.getElementById('ext_requestDate').value || null;
+                payload.customer_id = document.getElementById('ext_customerName').value;
+                payload.current_credit_limit = parseFloat(document.getElementById('ext_currentCreditLimit').value || 0);
+                payload.sales_poc_name = document.getElementById('ext_salesKam').value;
+                payload.current_outstanding = parseFloat(document.getElementById('ext_currentOutstanding').value || 0);
+                payload.ageing_overdue = document.getElementById('ext_ageingOverdue').value;
+                payload.tentative_clearance_date = document.getElementById('ext_clearanceDate').value || null;
+                payload.overdue_amount = parseFloat(document.getElementById('ext_overdueAmount').value || 0);
+                payload.credit_limit_required = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
+            } 
+            else if (criteria === 'Insurer Rejection - Credit Limit Exception') {
+                payload.customer_id = document.getElementById('rej_customerName').value;
+                payload.sales_poc_name = document.getElementById('rej_salesPoc').value;
+                payload.credit_limit_required = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
+                payload.temp_or_ongoing = document.querySelector('input[name="rej_tempOngoing"]:checked')?.value || null;
+                payload.risk_losing_business = document.querySelector('input[name="rej_riskLosing"]:checked')?.value || null;
+                payload.willing_prepaid = document.querySelector('input[name="rej_prepaid"]:checked')?.value || null;
+                payload.reason_credit_required = document.getElementById('rej_whyCredit').value;
+                payload.expected_payment_timeline = document.getElementById('rej_paymentTimeline').value;
+            } 
+            else if (criteria === 'Temporary Credit Approval - Insurer Limit Under Process') {
+                payload.customer_id = document.getElementById('temp_customerName').value;
+                payload.sales_poc_name = document.getElementById('temp_salesPoc').value;
+                payload.customer_type = document.querySelector('input[name="temp_custType"]:checked')?.value || null;
+                payload.onboarding_date = document.getElementById('temp_onboardingDate').value || null;
+                payload.credit_limit_required = parseFloat(document.getElementById('temp_creditLimitRequired').value || 0);
+                payload.reason_credit_required = document.getElementById('temp_whyBeforeInsurer').value;
+                payload.first_payment_date = document.getElementById('temp_firstPaymentDate').value || null;
+                payload.block_after_expiry = document.querySelector('input[name="temp_blockExpiry"]:checked')?.value || null;
+            }
 
-            if (insertError) throw insertError;
+            try {
+                var approverEmail = 'default-approver@xindus.net';
+                var matrixCcEmail = '';
 
-            statusMsg.className = 'status-msg success';
-            statusMsg.innerText = '✅ Request submitted successfully!';
-            statusMsg.style.display = 'block';
-            document.getElementById('creditForm').reset();
-            updateSections();
+                var res = await dbClient
+                    .from('approval_logic')
+                    .select('*')
+                    .eq('criteria', criteria)
+                    .lte('amount_from', payload.credit_limit_required)
+                    .gte('amount_to', payload.credit_limit_required)
+                    .limit(1);
 
-        } catch (err) {
-            statusMsg.className = 'status-msg error';
-            statusMsg.innerText = '❌ Error submitting request: ' + err.message;
-            statusMsg.style.display = 'block';
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerText = 'Submit Request';
-        }
-    });
+                if (res.data && res.data.length > 0) {
+                    approverEmail = res.data[0].approver_email;
+                    matrixCcEmail = res.data[0].cc_email || '';
+                }
+
+                payload.approver_email = approverEmail;
+                payload.cc_emails = matrixCcEmail ? (matrixCcEmail + ', ' + submitterEmail) : submitterEmail;
+
+                var ins = await dbClient
+                    .from('approval_requests')
+                    .insert([payload]);
+
+                if (ins.error) throw ins.error;
+
+                statusMsg.className = 'status-msg success';
+                statusMsg.innerText = '✅ Request submitted successfully!';
+                statusMsg.style.display = 'block';
+                document.getElementById('creditForm').reset();
+                updateSections();
+
+            } catch (err) {
+                statusMsg.className = 'status-msg error';
+                statusMsg.innerText = '❌ Error submitting request: ' + err.message;
+                statusMsg.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Submit Request';
+            }
+        });
+    })();
 </script>
 
 </body>
