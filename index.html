@@ -52,7 +52,6 @@
             </select>
         </div>
 
-        <!-- Unified Field Name across all criteria -->
         <div class="form-group">
             <label>Credit Limit Required (₹) *</label>
             <input type="number" id="creditLimitRequired" min="0" step="any" required>
@@ -88,9 +87,10 @@
 </div>
 
 <script>
-    // Config Supabase Connection
-    const SUPABASE_URL = 'YOUR_SUPABASE_PROJECT_URL';
-    const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+    // Configured with your Supabase Credentials
+    const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
+    
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     document.getElementById('creditForm').addEventListener('submit', async (e) => {
@@ -108,7 +108,7 @@
         const creditAmount = parseFloat(document.getElementById('creditLimitRequired').value);
 
         try {
-            // Step 1: Fetch Approver & CC configuration from 'approval_logic' matrix set via Admin Portal
+            // 1. Admin Approval Logic Matrix se Approver & CC Emails fetch karna
             let approverEmail = 'default-approver@xindus.net';
             let matrixCcEmail = '';
 
@@ -125,10 +125,10 @@
                 matrixCcEmail = matrixData[0].cc_email || '';
             }
 
-            // Combine Admin CC Emails with Submitter Email dynamically
+            // Submitter ke Email ko CC List mein automatically add karna
             let finalCcList = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
 
-            // Step 2: Insert into database table
+            // 2. Supabase DB Table me Request Insert karna
             const { error: insertError } = await supabase
                 .from('approval_requests')
                 .insert([{
@@ -136,7 +136,7 @@
                     sales_poc_name: document.getElementById('salesPoc').value,
                     submitter_email: submitterEmail,
                     approval_criteria: criteria,
-                    credit_limit_required: creditAmount, // Unified column name
+                    credit_limit_required: creditAmount,
                     current_credit_limit: parseFloat(document.getElementById('currentCreditLimit').value || 0),
                     current_outstanding: parseFloat(document.getElementById('currentOutstanding').value || 0),
                     credit_requirement_type: document.getElementById('creditType').value,
@@ -149,7 +149,7 @@
             if (insertError) throw insertError;
 
             statusMsg.className = 'status-msg success';
-            statusMsg.innerText = '✅ Request submitted successfully! CC copy set for ' + submitterEmail;
+            statusMsg.innerText = '✅ Request submitted successfully! CC copy tagged to ' + submitterEmail;
             statusMsg.style.display = 'block';
             document.getElementById('creditForm').reset();
 
