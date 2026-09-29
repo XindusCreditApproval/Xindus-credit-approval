@@ -6,18 +6,22 @@
     <title>Xindus - Credit Approval Request</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
-        .container { max-width: 650px; background: #ffffff; padding: 30px; border-radius: 8px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 680px; background: #ffffff; padding: 30px; border-radius: 8px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         h2 { color: #1e5631; margin-top: 0; text-align: center; }
         .sub-text { font-size: 13px; color: #666; text-align: center; margin-bottom: 20px; }
-        .form-group { margin-bottom: 18px; }
+        .form-section { background: #f9fbf9; border: 1px solid #dcdcdc; border-top: 4px solid #1e5631; padding: 18px; border-radius: 6px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
         label { display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 6px; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
-        button { width: 100%; padding: 12px; background-color: #1e5631; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+        textarea { resize: vertical; height: 80px; }
+        .radio-group label { font-weight: normal; display: inline-block; margin-right: 15px; cursor: pointer; }
+        button { width: 100%; padding: 12px; background-color: #1e5631; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
         button:hover { background-color: #143d22; }
         .status-msg { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; text-align: center; font-weight: bold; font-size: 13px; }
         .error { background-color: #ffe6e6; color: #d9534f; border: 1px solid #f5c6cb; }
         .success { background-color: #e6ffed; color: #28a745; border: 1px solid #c3e6cb; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
@@ -27,24 +31,16 @@
     <p class="sub-text">Please fill in the required details to submit a credit limit request.</p>
 
     <form id="creditForm">
+        <!-- Submitter Email -->
         <div class="form-group">
             <label>Your Email Address (Form Submitter) *</label>
             <input type="email" id="submitterEmail" placeholder="e.g. vikas.p@xindus.net" required>
         </div>
 
-        <div class="form-group">
-            <label>Customer ID / Name *</label>
-            <input type="text" id="customerId" required>
-        </div>
-
-        <div class="form-group">
-            <label>Sales POC Name *</label>
-            <input type="text" id="salesPoc" required>
-        </div>
-
+        <!-- Approval Criteria Selector -->
         <div class="form-group">
             <label>Approval Criteria / Reason *</label>
-            <select id="approvalCriteria" required>
+            <select id="approvalCriteria" required onchange="toggleCriteriaSections()">
                 <option value="">-- Select Criteria --</option>
                 <option value="Credit Limit Extension">Credit Limit Extension</option>
                 <option value="Insurer Rejection - Credit Limit Exception">Insurer Rejection - Credit Limit Exception</option>
@@ -52,32 +48,130 @@
             </select>
         </div>
 
-        <div class="form-group">
-            <label>Credit Limit Required (₹) *</label>
-            <input type="number" id="creditLimitRequired" min="0" step="any" required>
+        <!-- SECTION 1: Credit Limit Extension -->
+        <div id="sec_extension" class="form-section hidden">
+            <div class="form-group">
+                <label>What is the primary reason for this credit limit enhancement request? *</label>
+                <select id="primaryReason">
+                    <option value="">-- Choose --</option>
+                    <option value="Business Growth">Business Growth</option>
+                    <option value="Seasonal Demand">Seasonal Demand</option>
+                    <option value="Delayed Client Payment">Delayed Client Payment</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Request Date *</label>
+                <input type="date" id="ext_requestDate">
+            </div>
+            <div class="form-group">
+                <label>Customer ID / Name *</label>
+                <input type="text" id="ext_customerName">
+            </div>
+            <div class="form-group">
+                <label>Current Credit Limit (₹) *</label>
+                <input type="number" id="ext_currentCreditLimit" value="0">
+            </div>
+            <div class="form-group">
+                <label>Sales Owner / KAM *</label>
+                <input type="text" id="ext_salesKam">
+            </div>
+            <div class="form-group">
+                <label>Current Outstanding (₹) *</label>
+                <input type="number" id="ext_currentOutstanding" value="0">
+            </div>
+            <div class="form-group">
+                <label>Ageing of Overdue *</label>
+                <input type="text" id="ext_ageingOverdue" placeholder="e.g. 15 Days">
+            </div>
+            <div class="form-group">
+                <label>Tentative Clearance Date *</label>
+                <input type="date" id="ext_clearanceDate">
+            </div>
+            <div class="form-group">
+                <label>Overdue Amount If any (₹) *</label>
+                <input type="number" id="ext_overdueAmount" value="0">
+            </div>
+            <div class="form-group">
+                <label>Credit Limit Required (₹) *</label>
+                <input type="number" id="ext_creditLimitRequired" min="0" step="any">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Current Credit Limit (₹)</label>
-            <input type="number" id="currentCreditLimit" value="0">
+        <!-- SECTION 2: Insurer Rejection -->
+        <div id="sec_rejection" class="form-section hidden">
+            <div class="form-group">
+                <label>Customer Name *</label>
+                <input type="text" id="rej_customerName">
+            </div>
+            <div class="form-group">
+                <label>Sales POC Name *</label>
+                <input type="text" id="rej_salesPoc">
+            </div>
+            <div class="form-group">
+                <label>Credit Limit Required (₹) *</label>
+                <input type="number" id="rej_creditLimitRequired" min="0" step="any">
+            </div>
+            <div class="form-group radio-group">
+                <label>Is this credit requirement temporary or ongoing? *</label>
+                <label><input type="radio" name="rej_tempOngoing" value="Temporary"> Temporary</label>
+                <label><input type="radio" name="rej_tempOngoing" value="Ongoing"> Ongoing</label>
+            </div>
+            <div class="form-group radio-group">
+                <label>Is there a risk of losing the customer/business? *</label>
+                <label><input type="radio" name="rej_riskLosing" value="Yes"> Yes</label>
+                <label><input type="radio" name="rej_riskLosing" value="No"> No</label>
+            </div>
+            <div class="form-group radio-group">
+                <label>Is the customer willing to continue on prepaid terms?</label>
+                <label><input type="radio" name="rej_prepaid" value="Yes"> Yes</label>
+                <label><input type="radio" name="rej_prepaid" value="No"> No</label>
+            </div>
+            <div class="form-group">
+                <label>Why is credit required for this customer?</label>
+                <textarea id="rej_whyCredit"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Expected Payment Timeline *</label>
+                <input type="text" id="rej_paymentTimeline" placeholder="e.g. 30 Days">
+            </div>
         </div>
 
-        <div class="form-group">
-            <label>Current Outstanding (₹)</label>
-            <input type="number" id="currentOutstanding" value="0">
-        </div>
-
-        <div class="form-group">
-            <label>Credit Requirement Type</label>
-            <select id="creditType">
-                <option value="Regular / Recurring">Regular / Recurring</option>
-                <option value="Temporary / One-Time">Temporary / One-Time</option>
-            </select>
-        </div>
-
-        <div class="form-group">
-            <label>Expected Payment Timeline (Days)</label>
-            <input type="text" id="paymentTimeline" placeholder="e.g. 30 Days">
+        <!-- SECTION 3: Temporary Credit Approval -->
+        <div id="sec_temp" class="form-section hidden">
+            <div class="form-group">
+                <label>Customer Name *</label>
+                <input type="text" id="temp_customerName">
+            </div>
+            <div class="form-group">
+                <label>Sales POC Name *</label>
+                <input type="text" id="temp_salesPoc">
+            </div>
+            <div class="form-group radio-group">
+                <label>Customer Type *</label>
+                <label><input type="radio" name="temp_custType" value="New"> New</label>
+                <label><input type="radio" name="temp_custType" value="Existing"> Existing</label>
+            </div>
+            <div class="form-group">
+                <label>Customer Onboarding Date *</label>
+                <input type="date" id="temp_onboardingDate">
+            </div>
+            <div class="form-group">
+                <label>Credit Limit Required (₹) *</label>
+                <input type="number" id="temp_creditLimitRequired" min="0" step="any">
+            </div>
+            <div class="form-group">
+                <label>Why is credit required before Insurer approval? *</label>
+                <textarea id="temp_whyBeforeInsurer"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Expected First Payment Date *</label>
+                <input type="date" id="temp_firstPaymentDate">
+            </div>
+            <div class="form-group radio-group">
+                <label>Should credit be blocked after the temporary approval expiry date?</label>
+                <label><input type="radio" name="temp_blockExpiry" value="Yes"> Yes</label>
+                <label><input type="radio" name="temp_blockExpiry" value="No"> No</label>
+            </div>
         </div>
 
         <button type="submit" id="submitBtn">Submit Request</button>
@@ -87,11 +181,25 @@
 </div>
 
 <script>
-    // Configured with your Supabase Credentials
     const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
     
     const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    function toggleCriteriaSections() {
+        const selected = document.getElementById('approvalCriteria').value;
+        document.getElementById('sec_extension').classList.add('hidden');
+        document.getElementById('sec_rejection').classList.add('hidden');
+        document.getElementById('sec_temp').classList.add('hidden');
+
+        if (selected === 'Credit Limit Extension') {
+            document.getElementById('sec_extension').classList.remove('hidden');
+        } else if (selected === 'Insurer Rejection - Credit Limit Exception') {
+            document.getElementById('sec_rejection').classList.remove('hidden');
+        } else if (selected === 'Temporary Credit Approval - Insurer Limit Under Process') {
+            document.getElementById('sec_temp').classList.remove('hidden');
+        }
+    }
 
     document.getElementById('creditForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -105,53 +213,87 @@
 
         const submitterEmail = document.getElementById('submitterEmail').value.trim();
         const criteria = document.getElementById('approvalCriteria').value;
-        const creditAmount = parseFloat(document.getElementById('creditLimitRequired').value);
+
+        if (!criteria) {
+            alert("Please select Approval Criteria!");
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Submit Request';
+            return;
+        }
+
+        let payload = {
+            submitter_email: submitterEmail,
+            approval_criteria: criteria,
+            status: 'Pending'
+        };
+
+        // Extract values based on chosen criteria
+        if (criteria === 'Credit Limit Extension') {
+            payload.primary_reason = document.getElementById('primaryReason').value;
+            payload.request_date = document.getElementById('ext_requestDate').value || null;
+            payload.customer_id = document.getElementById('ext_customerName').value;
+            payload.current_credit_limit = parseFloat(document.getElementById('ext_currentCreditLimit').value || 0);
+            payload.sales_poc_name = document.getElementById('ext_salesKam').value;
+            payload.current_outstanding = parseFloat(document.getElementById('ext_currentOutstanding').value || 0);
+            payload.ageing_overdue = document.getElementById('ext_ageingOverdue').value;
+            payload.tentative_clearance_date = document.getElementById('ext_clearanceDate').value || null;
+            payload.overdue_amount = parseFloat(document.getElementById('ext_overdueAmount').value || 0);
+            payload.credit_limit_required = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
+        } 
+        else if (criteria === 'Insurer Rejection - Credit Limit Exception') {
+            payload.customer_id = document.getElementById('rej_customerName').value;
+            payload.sales_poc_name = document.getElementById('rej_salesPoc').value;
+            payload.credit_limit_required = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
+            payload.temp_or_ongoing = document.querySelector('input[name="rej_tempOngoing"]:checked')?.value || null;
+            payload.risk_losing_business = document.querySelector('input[name="rej_riskLosing"]:checked')?.value || null;
+            payload.willing_prepaid = document.querySelector('input[name="rej_prepaid"]:checked')?.value || null;
+            payload.reason_credit_required = document.getElementById('rej_whyCredit').value;
+            payload.expected_payment_timeline = document.getElementById('rej_paymentTimeline').value;
+        } 
+        else if (criteria === 'Temporary Credit Approval - Insurer Limit Under Process') {
+            payload.customer_id = document.getElementById('temp_customerName').value;
+            payload.sales_poc_name = document.getElementById('temp_salesPoc').value;
+            payload.customer_type = document.querySelector('input[name="temp_custType"]:checked')?.value || null;
+            payload.onboarding_date = document.getElementById('temp_onboardingDate').value || null;
+            payload.credit_limit_required = parseFloat(document.getElementById('temp_creditLimitRequired').value || 0);
+            payload.reason_credit_required = document.getElementById('temp_whyBeforeInsurer').value;
+            payload.first_payment_date = document.getElementById('temp_firstPaymentDate').value || null;
+            payload.block_after_expiry = document.querySelector('input[name="temp_blockExpiry"]:checked')?.value || null;
+        }
 
         try {
-            // 1. Admin Approval Logic Matrix se Approver & CC Emails fetch karna
+            // Fetch Approver Email & Matrix CC from 'approval_logic' table
             let approverEmail = 'default-approver@xindus.net';
             let matrixCcEmail = '';
 
-            const { data: matrixData, error: matrixErr } = await supabase
+            const { data: matrixData } = await supabase
                 .from('approval_logic')
                 .select('*')
                 .eq('criteria', criteria)
-                .lte('amount_from', creditAmount)
-                .gte('amount_to', creditAmount)
+                .lte('amount_from', payload.credit_limit_required)
+                .gte('amount_to', payload.credit_limit_required)
                 .limit(1);
 
-            if (!matrixErr && matrixData && matrixData.length > 0) {
+            if (matrixData && matrixData.length > 0) {
                 approverEmail = matrixData[0].approver_email;
                 matrixCcEmail = matrixData[0].cc_email || '';
             }
 
-            // Submitter ke Email ko CC List mein automatically add karna
-            let finalCcList = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
+            payload.approver_email = approverEmail;
+            payload.cc_emails = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
 
-            // 2. Supabase DB Table me Request Insert karna
+            // Submit to Supabase
             const { error: insertError } = await supabase
                 .from('approval_requests')
-                .insert([{
-                    customer_id: document.getElementById('customerId').value,
-                    sales_poc_name: document.getElementById('salesPoc').value,
-                    submitter_email: submitterEmail,
-                    approval_criteria: criteria,
-                    credit_limit_required: creditAmount,
-                    current_credit_limit: parseFloat(document.getElementById('currentCreditLimit').value || 0),
-                    current_outstanding: parseFloat(document.getElementById('currentOutstanding').value || 0),
-                    credit_requirement_type: document.getElementById('creditType').value,
-                    expected_payment_timeline: document.getElementById('paymentTimeline').value,
-                    approver_email: approverEmail,
-                    cc_emails: finalCcList,
-                    status: 'Pending'
-                }]);
+                .insert([payload]);
 
             if (insertError) throw insertError;
 
             statusMsg.className = 'status-msg success';
-            statusMsg.innerText = '✅ Request submitted successfully! CC copy tagged to ' + submitterEmail;
+            statusMsg.innerText = '✅ Request submitted successfully! Submitter CC added.';
             statusMsg.style.display = 'block';
             document.getElementById('creditForm').reset();
+            toggleCriteriaSections();
 
         } catch (err) {
             statusMsg.className = 'status-msg error';
