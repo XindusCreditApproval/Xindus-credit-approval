@@ -242,9 +242,9 @@
             statusMsg.style.display = 'none';
 
             var submitterEmail = document.getElementById('submitterEmail').value.trim();
-            var criteria = criteriaSelect.value;
+            var criteriaVal = criteriaSelect.value;
 
-            if (!criteria) {
+            if (!criteriaVal) {
                 alert("Please select Approval Criteria!");
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Submit Request';
@@ -253,11 +253,11 @@
 
             var payload = {
                 submitter_email: submitterEmail,
-                approval_criteria: criteria,
+                criteria: criteriaVal,
                 status: 'Pending'
             };
 
-            if (criteria === 'Credit Limit Extension') {
+            if (criteriaVal === 'Credit Limit Extension') {
                 payload.primary_reason = document.getElementById('primaryReason').value;
                 payload.request_date = document.getElementById('ext_requestDate').value || null;
                 payload.customer_id = document.getElementById('ext_customerName').value;
@@ -269,7 +269,7 @@
                 payload.overdue_amount = parseFloat(document.getElementById('ext_overdueAmount').value || 0);
                 payload.credit_limit_required = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
             } 
-            else if (criteria === 'Insurer Rejection - Credit Limit Exception') {
+            else if (criteriaVal === 'Insurer Rejection - Credit Limit Exception') {
                 payload.customer_id = document.getElementById('rej_customerName').value;
                 payload.sales_poc_name = document.getElementById('rej_salesPoc').value;
                 payload.credit_limit_required = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
@@ -279,7 +279,7 @@
                 payload.reason_credit_required = document.getElementById('rej_whyCredit').value;
                 payload.expected_payment_timeline = document.getElementById('rej_paymentTimeline').value;
             } 
-            else if (criteria === 'Temporary Credit Approval - Insurer Limit Under Process') {
+            else if (criteriaVal === 'Temporary Credit Approval - Insurer Limit Under Process') {
                 payload.customer_id = document.getElementById('temp_customerName').value;
                 payload.sales_poc_name = document.getElementById('temp_salesPoc').value;
                 payload.customer_type = document.querySelector('input[name="temp_custType"]:checked')?.value || null;
@@ -297,7 +297,7 @@
                 var res = await dbClient
                     .from('approval_logic')
                     .select('*')
-                    .eq('criteria', criteria)
+                    .or('approval_criteria.eq.' + criteriaVal + ',criteria.eq.' + criteriaVal)
                     .lte('amount_from', payload.credit_limit_required)
                     .gte('amount_to', payload.credit_limit_required)
                     .limit(1);
