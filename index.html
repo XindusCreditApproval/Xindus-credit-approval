@@ -22,18 +22,11 @@
             display: none;
         }
         
-        .form-section.active-section {
-            display: block !important;
-        }
-        
+        .form-section.active-section { display: block !important; }
         .form-group { margin-bottom: 16px; }
         label { display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 6px; }
         input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea { 
-            width: 100%; 
-            padding: 10px; 
-            border: 1px solid #ccc; 
-            border-radius: 4px; 
-            font-size: 14px; 
+            width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; 
         }
         textarea { resize: vertical; height: 80px; }
         .radio-group label { font-weight: normal; display: inline-block; margin-right: 15px; cursor: pointer; }
@@ -53,13 +46,11 @@
     <p class="sub-text">Please fill in the required details to submit a credit limit request.</p>
 
     <form id="creditForm" autocomplete="off">
-        <!-- Submitter Email -->
         <div class="form-group">
             <label>Your Email Address (Form Submitter) *</label>
             <input type="email" id="submitterEmail" autocomplete="off" required>
         </div>
 
-        <!-- Approval Criteria Selector (Populated Dynamically from Admin Portal) -->
         <div class="form-group">
             <label>Approval Criteria / Reason *</label>
             <select id="approvalCriteria" required>
@@ -211,7 +202,6 @@
         var secRejection = document.getElementById('sec_rejection');
         var secTemp = document.getElementById('sec_temp');
 
-        // Dynamic Loading of Criteria from Admin Logic Table
         async function loadApprovalCriteria() {
             var options = [
                 "Credit Limit Extension",
@@ -221,7 +211,7 @@
 
             if (dbClient) {
                 try {
-                    var res = await dbClient.from('approval_logic').select('approval_criteria, criteria');
+                    var res = await dbClient.from('approval_logic').select('*');
                     if (res.data && res.data.length > 0) {
                         var fetched = res.data.map(r => r.approval_criteria || r.criteria).filter(Boolean);
                         if (fetched.length > 0) {
@@ -229,7 +219,7 @@
                         }
                     }
                 } catch (e) {
-                    console.log("Could not pull dynamic options, fallback to defaults", e);
+                    console.log("Could not pull options:", e);
                 }
             }
 
@@ -255,7 +245,6 @@
             } else if (val.toLowerCase().includes('temporary') || val.toLowerCase().includes('process')) {
                 secTemp.classList.add('active-section');
             } else {
-                // Default fallback if unknown criteria is selected
                 secExtension.classList.add('active-section');
             }
         }
@@ -283,95 +272,80 @@
                 return;
             }
 
-            // Core Minimal Payload
-            var basePayload = {
-                submitter_email: submitterEmail,
-                status: 'Pending'
-            };
-
-            // Capture field values based on active section
-            var fullPayload = { ...basePayload };
+            var customerVal = "";
+            var salesPocVal = "";
+            var creditVal = 0;
 
             if (secExtension.classList.contains('active-section')) {
-                fullPayload.primary_reason = document.getElementById('primaryReason').value;
-                fullPayload.request_date = document.getElementById('ext_requestDate').value || null;
-                fullPayload.customer_id = document.getElementById('ext_customerName').value;
-                fullPayload.current_credit_limit = parseFloat(document.getElementById('ext_currentCreditLimit').value || 0);
-                fullPayload.sales_poc_name = document.getElementById('ext_salesKam').value;
-                fullPayload.current_outstanding = parseFloat(document.getElementById('ext_currentOutstanding').value || 0);
-                fullPayload.ageing_overdue = document.getElementById('ext_ageingOverdue').value;
-                fullPayload.tentative_clearance_date = document.getElementById('ext_clearanceDate').value || null;
-                fullPayload.overdue_amount = parseFloat(document.getElementById('ext_overdueAmount').value || 0);
-                fullPayload.credit_limit_required = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
-            } 
-            else if (secRejection.classList.contains('active-section')) {
-                fullPayload.customer_id = document.getElementById('rej_customerName').value;
-                fullPayload.sales_poc_name = document.getElementById('rej_salesPoc').value;
-                fullPayload.credit_limit_required = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
-                fullPayload.temp_or_ongoing = document.querySelector('input[name="rej_tempOngoing"]:checked')?.value || null;
-                fullPayload.risk_losing_business = document.querySelector('input[name="rej_riskLosing"]:checked')?.value || null;
-                fullPayload.willing_prepaid = document.querySelector('input[name="rej_prepaid"]:checked')?.value || null;
-                fullPayload.reason_credit_required = document.getElementById('rej_whyCredit').value;
-                fullPayload.expected_payment_timeline = document.getElementById('rej_paymentTimeline').value;
-            } 
-            else if (secTemp.classList.contains('active-section')) {
-                fullPayload.customer_id = document.getElementById('temp_customerName').value;
-                fullPayload.sales_poc_name = document.getElementById('temp_salesPoc').value;
-                fullPayload.customer_type = document.querySelector('input[name="temp_custType"]:checked')?.value || null;
-                fullPayload.onboarding_date = document.getElementById('temp_onboardingDate').value || null;
-                fullPayload.credit_limit_required = parseFloat(document.getElementById('temp_creditLimitRequired').value || 0);
-                fullPayload.reason_credit_required = document.getElementById('temp_whyBeforeInsurer').value;
-                fullPayload.first_payment_date = document.getElementById('temp_firstPaymentDate').value || null;
-                fullPayload.block_after_expiry = document.querySelector('input[name="temp_blockExpiry"]:checked')?.value || null;
+                customerVal = document.getElementById('ext_customerName').value;
+                salesPocVal = document.getElementById('ext_salesKam').value;
+                creditVal = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
+            } else if (secRejection.classList.contains('active-section')) {
+                customerVal = document.getElementById('rej_customerName').value;
+                salesPocVal = document.getElementById('rej_salesPoc').value;
+                creditVal = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
+            } else if (secTemp.classList.contains('active-section')) {
+                customerVal = document.getElementById('temp_customerName').value;
+                salesPocVal = document.getElementById('temp_salesPoc').value;
+                creditVal = parseFloat(document.getElementById('temp_creditLimitRequired').value || 0);
             }
 
             try {
-                // Determine Approver logic
                 var approverEmail = 'default-approver@xindus.net';
                 var matrixCcEmail = '';
 
                 var res = await dbClient
                     .from('approval_logic')
                     .select('*')
-                    .or('approval_criteria.eq.' + criteriaVal + ',criteria.eq.' + criteriaVal)
-                    .lte('amount_from', fullPayload.credit_limit_required || 0)
-                    .gte('amount_to', fullPayload.credit_limit_required || 0)
+                    .lte('amount_from', creditVal)
+                    .gte('amount_to', creditVal)
                     .limit(1);
 
                 if (res.data && res.data.length > 0) {
-                    approverEmail = res.data[0].approver_email;
+                    approverEmail = res.data[0].approver_email || approverEmail;
                     matrixCcEmail = res.data[0].cc_email || '';
                 }
 
-                fullPayload.approver_email = approverEmail;
-                fullPayload.cc_emails = matrixCcEmail ? (matrixCcEmail + ', ' + submitterEmail) : submitterEmail;
+                // Construct full payload
+                var rawPayload = {
+                    submitter_email: submitterEmail,
+                    status: 'Pending',
+                    approver_email: approverEmail,
+                    cc_emails: matrixCcEmail ? (matrixCcEmail + ', ' + submitterEmail) : submitterEmail,
+                    credit_limit_required: creditVal,
+                    approval_criteria: criteriaVal,
+                    criteria: criteriaVal,
+                    customer_id: customerVal,
+                    customer_name: customerVal,
+                    sales_poc_name: salesPocVal,
+                    sales_poc: salesPocVal
+                };
 
-                // Smart Insert with Column Fallbacks
-                async function insertPayload(data) {
-                    // Try with 'approval_criteria'
-                    var attempt1 = await dbClient.from('approval_requests').insert([{ ...data, approval_criteria: criteriaVal }]);
-                    if (!attempt1.error) return attempt1;
+                // Dynamic Retry Function: Removes invalid/missing column error and re-tries automatically
+                async function safeInsert(payloadData) {
+                    let currentData = { ...payloadData };
+                    for (let attempt = 0; attempt < 8; attempt++) {
+                        let response = await dbClient.from('approval_requests').insert([currentData]);
+                        
+                        if (!response.error) {
+                            return response; // Success!
+                        }
 
-                    // Fallback to 'criteria'
-                    var attempt2 = await dbClient.from('approval_requests').insert([{ ...data, criteria: criteriaVal }]);
-                    if (!attempt2.error) return attempt2;
+                        // Check if error is due to a missing column
+                        let errMsg = response.error.message || '';
+                        let missingColMatch = errMsg.match(/Could not find the '([^']+)' column/i);
 
-                    // Fallback to minimal core fields if extra optional columns are missing
-                    var minData = {
-                        submitter_email: submitterEmail,
-                        customer_id: data.customer_id || 'N/A',
-                        sales_poc_name: data.sales_poc_name || '',
-                        credit_limit_required: data.credit_limit_required || 0,
-                        approver_email: approverEmail,
-                        status: 'Pending',
-                        approval_criteria: criteriaVal
-                    };
-                    return await dbClient.from('approval_requests').insert([minData]);
+                        if (missingColMatch && missingColMatch[1]) {
+                            let badCol = missingColMatch[1];
+                            delete currentData[badCol]; // Remove the missing column and retry loop
+                        } else {
+                            throw response.error; // Other database error
+                        }
+                    }
+                    throw new Error("Unable to map Supabase columns automatically.");
                 }
 
-                var ins = await insertPayload(fullPayload);
-
-                if (ins.error) throw ins.error;
+                await safeInsert(rawPayload);
 
                 statusMsg.className = 'status-msg success';
                 statusMsg.innerText = '✅ Request submitted successfully!';
