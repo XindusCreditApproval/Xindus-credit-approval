@@ -4,355 +4,196 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Xindus - Credit Approval Request</title>
-    <!-- Supabase JS Client library v2 -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-        }
-        body {
-            background-color: #f4f6f9;
-            margin: 0;
-            padding: 24px 12px;
-            color: #2d3748;
-        }
-        .container {
-            max-width: 720px;
-            background: #ffffff;
-            padding: 32px;
-            border-radius: 12px;
-            margin: 0 auto;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-            border: 1px solid #e2e8f0;
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 28px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #edf2f7;
-        }
-        h2 {
-            color: #1e5631;
-            margin: 0 0 8px 0;
-            font-size: 26px;
-            font-weight: 700;
-        }
-        .sub-text {
-            font-size: 14px;
-            color: #718096;
-            margin: 0;
-        }
+        * { box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Arial, sans-serif; background-color: #f4f6f9; margin: 0; padding: 20px; }
+        .container { max-width: 680px; background: #ffffff; padding: 30px; border-radius: 8px; margin: 0 auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { color: #1e5631; margin-top: 0; text-align: center; }
+        .sub-text { font-size: 13px; color: #666; text-align: center; margin-bottom: 20px; }
+        
         .form-section { 
-            background: #f8faf8; 
-            border: 1px solid #d1e7dd; 
+            background: #f9fbf9; 
+            border: 1px solid #dcdcdc; 
             border-top: 4px solid #1e5631; 
-            padding: 22px; 
-            border-radius: 8px; 
-            margin-bottom: 24px; 
+            padding: 18px; 
+            border-radius: 6px; 
+            margin-bottom: 20px; 
             display: none;
-            transition: all 0.25s ease-in-out;
         }
+        
         .form-section.active-section {
-            display: block;
-            animation: fadeIn 0.3s ease-in-out;
+            display: block !important;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-4px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .form-group {
-            margin-bottom: 18px;
-        }
-        label {
-            display: block;
-            font-weight: 600;
-            font-size: 13px;
-            color: #2d3748;
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.3px;
-        }
-        input[type="text"], 
-        input[type="number"], 
-        input[type="date"], 
-        input[type="email"], 
-        select, 
-        textarea { 
+        
+        .form-group { margin-bottom: 16px; }
+        label { display: block; font-weight: 600; font-size: 13px; color: #333; margin-bottom: 6px; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="email"], select, textarea { 
             width: 100%; 
-            padding: 11px 14px; 
-            border: 1px solid #cbd5e0; 
-            border-radius: 6px; 
+            padding: 10px; 
+            border: 1px solid #ccc; 
+            border-radius: 4px; 
             font-size: 14px; 
-            background-color: #ffffff;
-            color: #2d3748;
-            transition: border-color 0.2s, box-shadow 0.2s;
         }
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #1e5631;
-            box-shadow: 0 0 0 3px rgba(30, 86, 49, 0.15);
-        }
-        textarea {
-            resize: vertical;
-            min-height: 85px;
-        }
-        .radio-group {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-            margin-top: 6px;
-        }
-        .radio-group label {
-            font-weight: 500;
-            font-size: 14px;
-            text-transform: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            margin-bottom: 0;
-            color: #4a5568;
-        }
-        .radio-group input[type="radio"] {
-            accent-color: #1e5631;
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
-        .btn-submit { 
-            width: 100%; 
-            padding: 14px; 
-            background-color: #1e5631; 
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            font-weight: 700; 
-            cursor: pointer; 
-            font-size: 16px; 
-            margin-top: 10px; 
-            letter-spacing: 0.5px;
-            box-shadow: 0 4px 6px -1px rgba(30, 86, 49, 0.2);
-            transition: background-color 0.2s, transform 0.1s;
-        }
-        .btn-submit:hover { 
-            background-color: #143d22; 
-        }
-        .btn-submit:active {
-            transform: scale(0.99);
-        }
-        .btn-submit:disabled {
-            background-color: #a0aec0;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-        .status-msg { 
-            margin-top: 20px; 
-            padding: 14px 18px; 
-            border-radius: 6px; 
-            display: none; 
-            font-weight: 600; 
-            font-size: 14px; 
-            line-height: 1.5;
-        }
-        .status-msg.error { 
-            background-color: #fff5f5; 
-            color: #c53030; 
-            border: 1px solid #feb2b2; 
-        }
-        .status-msg.success { 
-            background-color: #f0fff4; 
-            color: #22543d; 
-            border: 1px solid #9ae6b4; 
-        }
-        .badge-loading {
-            display: inline-block;
-            font-size: 11px;
-            color: #718096;
-            margin-left: 6px;
-            font-weight: normal;
-        }
+        textarea { resize: vertical; height: 80px; }
+        .radio-group label { font-weight: normal; display: inline-block; margin-right: 15px; cursor: pointer; }
+        
+        button { width: 100%; padding: 12px; background-color: #1e5631; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 15px; margin-top: 10px; }
+        button:hover { background-color: #143d22; }
+        
+        .status-msg { margin-top: 15px; padding: 10px; border-radius: 4px; display: none; text-align: center; font-weight: bold; font-size: 13px; }
+        .error { background-color: #ffe6e6; color: #d9534f; border: 1px solid #f5c6cb; }
+        .success { background-color: #e6ffed; color: #28a745; border: 1px solid #c3e6cb; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header">
-        <h2>💼 Credit Approval Request Form</h2>
-        <p class="sub-text">Select a criteria managed dynamically from the Admin Threshold Matrix.</p>
-    </div>
+    <h2>📋 Credit Approval Request Form</h2>
+    <p class="sub-text">Please fill in the required details to submit a credit limit request.</p>
 
     <form id="creditForm" autocomplete="off">
         <!-- Submitter Email -->
         <div class="form-group">
-            <label for="submitterEmail">Your Email Address (Form Submitter) *</label>
-            <input type="email" id="submitterEmail" placeholder="requester@xindus.net" required>
+            <label>Your Email Address (Form Submitter) *</label>
+            <input type="email" id="submitterEmail" autocomplete="off" required>
         </div>
 
-        <!-- Approval Criteria Selector -->
+        <!-- Approval Criteria Selector (Populated Dynamically from Admin Portal) -->
         <div class="form-group">
-            <label for="approvalCriteria">
-                Approval Criteria / Reason * 
-                <span id="criteriaStatus" class="badge-loading">(Loading options from Supabase...)</span>
-            </label>
+            <label>Approval Criteria / Reason *</label>
             <select id="approvalCriteria" required>
-                <option value="">-- Fetching Criteria... --</option>
+                <option value="">-- Loading Criteria... --</option>
             </select>
         </div>
 
+        <!-- SECTION 1: Credit Limit Extension -->
         <div id="sec_extension" class="form-section">
             <div class="form-group">
-                <label for="primaryReason">Primary reason for enhancement *</label>
+                <label>What is the primary reason for this credit limit enhancement request? *</label>
                 <select id="primaryReason">
-                    <option value="">-- Choose Reason --</option>
+                    <option value="">-- Choose --</option>
                     <option value="Business Growth">Business Growth</option>
                     <option value="Seasonal Demand">Seasonal Demand</option>
                     <option value="Delayed Client Payment">Delayed Client Payment</option>
                 </select>
             </div>
             <div class="form-group">
-                <label for="ext_requestDate">Request Date *</label>
+                <label>Request Date *</label>
                 <input type="date" id="ext_requestDate">
             </div>
             <div class="form-group">
-                <label for="ext_customerName">Customer ID / Name *</label>
-                <input type="text" id="ext_customerName" placeholder="e.g. CUST-10492 / Acme Corp">
+                <label>Customer ID / Name *</label>
+                <input type="text" id="ext_customerName">
             </div>
             <div class="form-group">
-                <label for="ext_currentCreditLimit">Current Credit Limit (₹) *</label>
-                <input type="number" id="ext_currentCreditLimit" value="0" min="0">
+                <label>Current Credit Limit (₹) *</label>
+                <input type="number" id="ext_currentCreditLimit" value="0">
             </div>
             <div class="form-group">
-                <label for="ext_salesKam">Sales Owner / KAM *</label>
-                <input type="text" id="ext_salesKam" placeholder="e.g. Rahul Sharma">
+                <label>Sales Owner / KAM *</label>
+                <input type="text" id="ext_salesKam">
             </div>
             <div class="form-group">
-                <label for="ext_currentOutstanding">Current Outstanding (₹) *</label>
-                <input type="number" id="ext_currentOutstanding" value="0" min="0">
+                <label>Current Outstanding (₹) *</label>
+                <input type="number" id="ext_currentOutstanding" value="0">
             </div>
             <div class="form-group">
-                <label for="ext_ageingOverdue">Ageing of Overdue *</label>
-                <input type="text" id="ext_ageingOverdue" placeholder="e.g. 15 Days">
+                <label>Ageing of Overdue *</label>
+                <input type="text" id="ext_ageingOverdue">
             </div>
             <div class="form-group">
-                <label for="ext_clearanceDate">Tentative Clearance Date *</label>
+                <label>Tentative Clearance Date *</label>
                 <input type="date" id="ext_clearanceDate">
             </div>
             <div class="form-group">
-                <label for="ext_overdueAmount">Overdue Amount If Any (₹) *</label>
-                <input type="number" id="ext_overdueAmount" value="0" min="0">
+                <label>Overdue Amount If any (₹) *</label>
+                <input type="number" id="ext_overdueAmount" value="0">
             </div>
             <div class="form-group">
-                <label for="ext_creditLimitRequired">Credit Limit Required (₹) *</label>
-                <input type="number" id="ext_creditLimitRequired" min="0" step="any" placeholder="e.g. 250000">
+                <label>Credit Limit Required (₹) *</label>
+                <input type="number" id="ext_creditLimitRequired" min="0" step="any">
             </div>
         </div>
 
+        <!-- SECTION 2: Insurer Rejection -->
         <div id="sec_rejection" class="form-section">
             <div class="form-group">
-                <label for="rej_customerName">Customer Name *</label>
-                <input type="text" id="rej_customerName" placeholder="e.g. Global Tech LLC">
+                <label>Customer Name *</label>
+                <input type="text" id="rej_customerName">
             </div>
             <div class="form-group">
-                <label for="rej_salesPoc">Sales POC Name *</label>
-                <input type="text" id="rej_salesPoc" placeholder="e.g. Vikas P">
+                <label>Sales POC Name *</label>
+                <input type="text" id="rej_salesPoc">
             </div>
             <div class="form-group">
-                <label for="rej_creditLimitRequired">Credit Limit Required (₹) *</label>
-                <input type="number" id="rej_creditLimitRequired" min="0" step="any" placeholder="e.g. 150000">
+                <label>Credit Limit Required (₹) *</label>
+                <input type="number" id="rej_creditLimitRequired" min="0" step="any">
+            </div>
+            <div class="form-group radio-group">
+                <label>Is this credit requirement temporary or ongoing? *</label>
+                <label><input type="radio" name="rej_tempOngoing" value="Temporary"> Temporary</label>
+                <label><input type="radio" name="rej_tempOngoing" value="Ongoing"> Ongoing</label>
+            </div>
+            <div class="form-group radio-group">
+                <label>Is there a risk of losing the customer/business? *</label>
+                <label><input type="radio" name="rej_riskLosing" value="Yes"> Yes</label>
+                <label><input type="radio" name="rej_riskLosing" value="No"> No</label>
+            </div>
+            <div class="form-group radio-group">
+                <label>Is the customer willing to continue on prepaid terms?</label>
+                <label><input type="radio" name="rej_prepaid" value="Yes"> Yes</label>
+                <label><input type="radio" name="rej_prepaid" value="No"> No</label>
             </div>
             <div class="form-group">
-                <label>Is this requirement temporary or ongoing? *</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="rej_tempOngoing" value="Temporary" checked> Temporary</label>
-                    <label><input type="radio" name="rej_tempOngoing" value="Ongoing"> Ongoing</label>
-                </div>
+                <label>Why is credit required for this customer?</label>
+                <textarea id="rej_whyCredit"></textarea>
             </div>
             <div class="form-group">
-                <label>Risk of losing customer/business? *</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="rej_riskLosing" value="Yes" checked> Yes</label>
-                    <label><input type="radio" name="rej_riskLosing" value="No"> No</label>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Customer willing to continue on prepaid terms?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="rej_prepaid" value="Yes"> Yes</label>
-                    <label><input type="radio" name="rej_prepaid" value="No" checked> No</label>
-                </div>
-            </div>
-            <div class="form-group">
-                <label for="rej_whyCredit">Why is credit required for this customer? *</label>
-                <textarea id="rej_whyCredit" placeholder="Explain the exception details..."></textarea>
-            </div>
-            <div class="form-group">
-                <label for="rej_paymentTimeline">Expected Payment Timeline *</label>
-                <input type="text" id="rej_paymentTimeline" placeholder="e.g. 30 Days Net">
+                <label>Expected Payment Timeline *</label>
+                <input type="text" id="rej_paymentTimeline">
             </div>
         </div>
 
+        <!-- SECTION 3: Temporary Credit Approval -->
         <div id="sec_temp" class="form-section">
             <div class="form-group">
-                <label for="temp_customerName">Customer Name *</label>
-                <input type="text" id="temp_customerName" placeholder="e.g. Zenith Enterprises">
+                <label>Customer Name *</label>
+                <input type="text" id="temp_customerName">
             </div>
             <div class="form-group">
-                <label for="temp_salesPoc">Sales POC Name *</label>
-                <input type="text" id="temp_salesPoc" placeholder="e.g. Anish M">
+                <label>Sales POC Name *</label>
+                <input type="text" id="temp_salesPoc">
             </div>
-            <div class="form-group">
+            <div class="form-group radio-group">
                 <label>Customer Type *</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="temp_custType" value="New" checked> New</label>
-                    <label><input type="radio" name="temp_custType" value="Existing"> Existing</label>
-                </div>
+                <label><input type="radio" name="temp_custType" value="New"> New</label>
+                <label><input type="radio" name="temp_custType" value="Existing"> Existing</label>
             </div>
             <div class="form-group">
-                <label for="temp_onboardingDate">Customer Onboarding Date *</label>
+                <label>Customer Onboarding Date *</label>
                 <input type="date" id="temp_onboardingDate">
             </div>
             <div class="form-group">
-                <label for="temp_creditLimitRequired">Credit Limit Required (₹) *</label>
-                <input type="number" id="temp_creditLimitRequired" min="0" step="any" placeholder="e.g. 500000">
+                <label>Credit Limit Required (₹) *</label>
+                <input type="number" id="temp_creditLimitRequired" min="0" step="any">
             </div>
             <div class="form-group">
-                <label for="temp_whyBeforeInsurer">Why is credit required before Insurer approval? *</label>
-                <textarea id="temp_whyBeforeInsurer" placeholder="Provide justification..."></textarea>
+                <label>Why is credit required before Insurer approval? *</label>
+                <textarea id="temp_whyBeforeInsurer"></textarea>
             </div>
             <div class="form-group">
-                <label for="temp_firstPaymentDate">Expected First Payment Date *</label>
+                <label>Expected First Payment Date *</label>
                 <input type="date" id="temp_firstPaymentDate">
             </div>
-            <div class="form-group">
-                <label>Block credit after temporary approval expiry date?</label>
-                <div class="radio-group">
-                    <label><input type="radio" name="temp_blockExpiry" value="Yes" checked> Yes</label>
-                    <label><input type="radio" name="temp_blockExpiry" value="No"> No</label>
-                </div>
+            <div class="form-group radio-group">
+                <label>Should credit be blocked after the temporary approval expiry date?</label>
+                <label><input type="radio" name="temp_blockExpiry" value="Yes"> Yes</label>
+                <label><input type="radio" name="temp_blockExpiry" value="No"> No</label>
             </div>
         </div>
 
-        <div id="sec_generic" class="form-section">
-            <div class="form-group">
-                <label for="gen_customerName">Customer ID / Name *</label>
-                <input type="text" id="gen_customerName" placeholder="e.g. Customer Name">
-            </div>
-            <div class="form-group">
-                <label for="gen_salesPoc">Sales Owner / POC Name *</label>
-                <input type="text" id="gen_salesPoc" placeholder="e.g. Representative Name">
-            </div>
-            <div class="form-group">
-                <label for="gen_creditLimitRequired">Credit Limit Required (₹) *</label>
-                <input type="number" id="gen_creditLimitRequired" min="0" step="any" placeholder="e.g. 100000">
-            </div>
-            <div class="form-group">
-                <label for="gen_reason">Detailed Justification *</label>
-                <textarea id="gen_reason" placeholder="Provide background and request justification..."></textarea>
-            </div>
-        </div>
-
-        <button type="submit" id="submitBtn" class="btn-submit">Submit Request</button>
+        <button type="submit" id="submitBtn">Submit Request</button>
     </form>
 
     <div id="statusMsg" class="status-msg"></div>
@@ -360,252 +201,192 @@
 
 <script>
     (function() {
-        // Supabase configuration details
         const SUPABASE_URL = 'https://mhvxlgqkfxghpkjfvude.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1odnhsZ3FrZnhnaHBramZ2dWRlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTAyMjEyNjAsImV4cCI6MjEwNTc5NzI2MH0.PqRFxJXWgqXahvNKTQwiCKWDPSVH8DYNHUEhVWM7Pwo';
         
-        const dbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+        var dbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
-        const criteriaSelect = document.getElementById('approvalCriteria');
-        const criteriaStatus = document.getElementById('criteriaStatus');
-        
-        const secExtension = document.getElementById('sec_extension');
-        const secRejection = document.getElementById('sec_rejection');
-        const secTemp = document.getElementById('sec_temp');
-        const secGeneric = document.getElementById('sec_generic');
+        var criteriaSelect = document.getElementById('approvalCriteria');
+        var secExtension = document.getElementById('sec_extension');
+        var secRejection = document.getElementById('sec_rejection');
+        var secTemp = document.getElementById('sec_temp');
 
-        // Fallback default options in case Supabase table is empty or offline
-        const DEFAULT_CRITERIA_OPTIONS = [
-            "Credit Limit Extension",
-            "Insurer Rejection - Credit Limit Exception",
-            "Temporary Credit Approval - Insurer Limit Under Process"
-        ];
+        // Dynamic Loading of Criteria from Admin Logic Table
+        async function loadApprovalCriteria() {
+            var options = [
+                "Credit Limit Extension",
+                "Insurer Rejection - Credit Limit Exception",
+                "Temporary Credit Approval - Insurer Limit Under Process"
+            ];
 
-        async function loadApprovalCriteriaFromSupabase() {
-            try {
-                if (!dbClient) throw new Error("Supabase client failed to load.");
-
-                // Query approval_logic table for all configured criteria options
-                const { data, error } = await dbClient
-                    .from('approval_logic')
-                    .select('approval_criteria, criteria');
-
-                if (error) {
-                    console.warn("Could not fetch logic criteria from DB:", error.message);
-                    populateDropdown(DEFAULT_CRITERIA_OPTIONS);
-                    criteriaStatus.innerText = "(Loaded standard options)";
-                    return;
-                }
-
-                // Extract non-null unique criteria from retrieved records
-                const fetchedList = [];
-                if (data && data.length > 0) {
-                    data.forEach(row => {
-                        const val = row.approval_criteria || row.criteria;
-                        if (val && !fetchedList.includes(val)) {
-                            fetchedList.push(val);
+            if (dbClient) {
+                try {
+                    var res = await dbClient.from('approval_logic').select('approval_criteria, criteria');
+                    if (res.data && res.data.length > 0) {
+                        var fetched = res.data.map(r => r.approval_criteria || r.criteria).filter(Boolean);
+                        if (fetched.length > 0) {
+                            options = Array.from(new Set([...fetched, ...options]));
                         }
-                    });
+                    }
+                } catch (e) {
+                    console.log("Could not pull dynamic options, fallback to defaults", e);
                 }
-
-                if (fetchedList.length > 0) {
-                    populateDropdown(fetchedList);
-                    criteriaStatus.innerText = "✓ Synced with Admin Logic";
-                    criteriaStatus.style.color = "#276749";
-                } else {
-                    populateDropdown(DEFAULT_CRITERIA_OPTIONS);
-                    criteriaStatus.innerText = "(Loaded default options)";
-                }
-
-            } catch (err) {
-                console.error("Error loading criteria:", err);
-                populateDropdown(DEFAULT_CRITERIA_OPTIONS);
-                criteriaStatus.innerText = "(Offline options loaded)";
             }
-        }
 
-        function populateDropdown(optionsArray) {
             criteriaSelect.innerHTML = '<option value="">-- Select Criteria --</option>';
-            
-            optionsArray.forEach(opt => {
-                const optionEl = document.createElement('option');
-                optionEl.value = opt;
-                optionEl.textContent = opt;
-                criteriaSelect.appendChild(optionEl);
+            options.forEach(function(opt) {
+                var el = document.createElement('option');
+                el.value = opt;
+                el.textContent = opt;
+                criteriaSelect.appendChild(el);
             });
         }
 
-        function updateActiveSection() {
-            const val = criteriaSelect.value.trim().toLowerCase();
-            
-            // Hide all sections first
+        function updateSections() {
+            var val = criteriaSelect.value;
             secExtension.classList.remove('active-section');
             secRejection.classList.remove('active-section');
             secTemp.classList.remove('active-section');
-            secGeneric.classList.remove('active-section');
 
-            if (!val) return;
-
-            // Normalize checks for standard types or generic admin options
-            if (val.includes('extension')) {
+            if (val.toLowerCase().includes('extension')) {
                 secExtension.classList.add('active-section');
-            } else if (val.includes('rejection') || val.includes('exception')) {
+            } else if (val.toLowerCase().includes('rejection') || val.toLowerCase().includes('exception')) {
                 secRejection.classList.add('active-section');
-            } else if (val.includes('temporary')) {
+            } else if (val.toLowerCase().includes('temporary') || val.toLowerCase().includes('process')) {
                 secTemp.classList.add('active-section');
             } else {
-                // For custom criteria added in admin panel
-                secGeneric.classList.add('active-section');
+                // Default fallback if unknown criteria is selected
+                secExtension.classList.add('active-section');
             }
         }
 
-        criteriaSelect.addEventListener('change', updateActiveSection);
+        criteriaSelect.addEventListener('change', updateSections);
+        loadApprovalCriteria();
 
         document.getElementById('creditForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const submitBtn = document.getElementById('submitBtn');
-            const statusMsg = document.getElementById('statusMsg');
+            var submitBtn = document.getElementById('submitBtn');
+            var statusMsg = document.getElementById('statusMsg');
             
             submitBtn.disabled = true;
-            submitBtn.innerText = 'Submitting Request...';
+            submitBtn.innerText = 'Processing...';
             statusMsg.style.display = 'none';
 
-            const submitterEmail = document.getElementById('submitterEmail').value.trim();
-            const criteriaVal = criteriaSelect.value.trim();
+            var submitterEmail = document.getElementById('submitterEmail').value.trim();
+            var criteriaVal = criteriaSelect.value;
 
             if (!criteriaVal) {
-                alert("Please select an Approval Criteria!");
+                alert("Please select Approval Criteria!");
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Submit Request';
                 return;
             }
 
-            const normalizedCriteria = criteriaVal.toLowerCase();
-            
-            // Base Payload
-            let baseData = {
+            // Core Minimal Payload
+            var basePayload = {
                 submitter_email: submitterEmail,
                 status: 'Pending'
             };
 
-            // Section Specific Data Extraction
-            if (normalizedCriteria.includes('extension')) {
-                baseData.primary_reason = document.getElementById('primaryReason').value;
-                baseData.request_date = document.getElementById('ext_requestDate').value || null;
-                baseData.customer_id = document.getElementById('ext_customerName').value;
-                baseData.current_credit_limit = parseFloat(document.getElementById('ext_currentCreditLimit').value || 0);
-                baseData.sales_poc_name = document.getElementById('ext_salesKam').value;
-                baseData.current_outstanding = parseFloat(document.getElementById('ext_currentOutstanding').value || 0);
-                baseData.ageing_overdue = document.getElementById('ext_ageingOverdue').value;
-                baseData.tentative_clearance_date = document.getElementById('ext_clearanceDate').value || null;
-                baseData.overdue_amount = parseFloat(document.getElementById('ext_overdueAmount').value || 0);
-                baseData.credit_limit_required = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
+            // Capture field values based on active section
+            var fullPayload = { ...basePayload };
+
+            if (secExtension.classList.contains('active-section')) {
+                fullPayload.primary_reason = document.getElementById('primaryReason').value;
+                fullPayload.request_date = document.getElementById('ext_requestDate').value || null;
+                fullPayload.customer_id = document.getElementById('ext_customerName').value;
+                fullPayload.current_credit_limit = parseFloat(document.getElementById('ext_currentCreditLimit').value || 0);
+                fullPayload.sales_poc_name = document.getElementById('ext_salesKam').value;
+                fullPayload.current_outstanding = parseFloat(document.getElementById('ext_currentOutstanding').value || 0);
+                fullPayload.ageing_overdue = document.getElementById('ext_ageingOverdue').value;
+                fullPayload.tentative_clearance_date = document.getElementById('ext_clearanceDate').value || null;
+                fullPayload.overdue_amount = parseFloat(document.getElementById('ext_overdueAmount').value || 0);
+                fullPayload.credit_limit_required = parseFloat(document.getElementById('ext_creditLimitRequired').value || 0);
             } 
-            else if (normalizedCriteria.includes('rejection') || normalizedCriteria.includes('exception')) {
-                baseData.customer_id = document.getElementById('rej_customerName').value;
-                baseData.sales_poc_name = document.getElementById('rej_salesPoc').value;
-                baseData.credit_limit_required = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
-                baseData.temp_or_ongoing = document.querySelector('input[name="rej_tempOngoing"]:checked')?.value || null;
-                baseData.risk_losing_business = document.querySelector('input[name="rej_riskLosing"]:checked')?.value || null;
-                baseData.willing_prepaid = document.querySelector('input[name="rej_prepaid"]:checked')?.value || null;
-                baseData.reason_credit_required = document.getElementById('rej_whyCredit').value;
-                baseData.expected_payment_timeline = document.getElementById('rej_paymentTimeline').value;
+            else if (secRejection.classList.contains('active-section')) {
+                fullPayload.customer_id = document.getElementById('rej_customerName').value;
+                fullPayload.sales_poc_name = document.getElementById('rej_salesPoc').value;
+                fullPayload.credit_limit_required = parseFloat(document.getElementById('rej_creditLimitRequired').value || 0);
+                fullPayload.temp_or_ongoing = document.querySelector('input[name="rej_tempOngoing"]:checked')?.value || null;
+                fullPayload.risk_losing_business = document.querySelector('input[name="rej_riskLosing"]:checked')?.value || null;
+                fullPayload.willing_prepaid = document.querySelector('input[name="rej_prepaid"]:checked')?.value || null;
+                fullPayload.reason_credit_required = document.getElementById('rej_whyCredit').value;
+                fullPayload.expected_payment_timeline = document.getElementById('rej_paymentTimeline').value;
             } 
-            else if (normalizedCriteria.includes('temporary')) {
-                baseData.customer_id = document.getElementById('temp_customerName').value;
-                baseData.sales_poc_name = document.getElementById('temp_salesPoc').value;
-                baseData.customer_type = document.querySelector('input[name="temp_custType"]:checked')?.value || null;
-                baseData.onboarding_date = document.getElementById('temp_onboardingDate').value || null;
-                baseData.credit_limit_required = parseFloat(document.getElementById('temp_creditLimitRequired').value || 0);
-                baseData.reason_credit_required = document.getElementById('temp_whyBeforeInsurer').value;
-                baseData.first_payment_date = document.getElementById('temp_firstPaymentDate').value || null;
-                baseData.block_after_expiry = document.querySelector('input[name="temp_blockExpiry"]:checked')?.value || null;
-            } 
-            else {
-                // Custom Criteria Form
-                baseData.customer_id = document.getElementById('gen_customerName').value;
-                baseData.sales_poc_name = document.getElementById('gen_salesPoc').value;
-                baseData.credit_limit_required = parseFloat(document.getElementById('gen_creditLimitRequired').value || 0);
-                baseData.reason_credit_required = document.getElementById('gen_reason').value;
+            else if (secTemp.classList.contains('active-section')) {
+                fullPayload.customer_id = document.getElementById('temp_customerName').value;
+                fullPayload.sales_poc_name = document.getElementById('temp_salesPoc').value;
+                fullPayload.customer_type = document.querySelector('input[name="temp_custType"]:checked')?.value || null;
+                fullPayload.onboarding_date = document.getElementById('temp_onboardingDate').value || null;
+                fullPayload.credit_limit_required = parseFloat(document.getElementById('temp_creditLimitRequired').value || 0);
+                fullPayload.reason_credit_required = document.getElementById('temp_whyBeforeInsurer').value;
+                fullPayload.first_payment_date = document.getElementById('temp_firstPaymentDate').value || null;
+                fullPayload.block_after_expiry = document.querySelector('input[name="temp_blockExpiry"]:checked')?.value || null;
             }
 
             try {
-                // Fetch Approver logic from approval_logic matrix in Supabase
-                let approverEmail = 'default-approver@xindus.net';
-                let matrixCcEmail = '';
+                // Determine Approver logic
+                var approverEmail = 'default-approver@xindus.net';
+                var matrixCcEmail = '';
 
-                const { data: matrixData } = await dbClient
+                var res = await dbClient
                     .from('approval_logic')
                     .select('*')
-                    .or(`approval_criteria.ilike.%${criteriaVal}%,criteria.ilike.%${criteriaVal}%`)
-                    .lte('amount_from', baseData.credit_limit_required)
-                    .gte('amount_to', baseData.credit_limit_required)
+                    .or('approval_criteria.eq.' + criteriaVal + ',criteria.eq.' + criteriaVal)
+                    .lte('amount_from', fullPayload.credit_limit_required || 0)
+                    .gte('amount_to', fullPayload.credit_limit_required || 0)
                     .limit(1);
 
-                if (matrixData && matrixData.length > 0) {
-                    approverEmail = matrixData[0].approver_email || approverEmail;
-                    matrixCcEmail = matrixData[0].cc_email || '';
+                if (res.data && res.data.length > 0) {
+                    approverEmail = res.data[0].approver_email;
+                    matrixCcEmail = res.data[0].cc_email || '';
                 }
 
-                baseData.approver_email = approverEmail;
-                baseData.cc_emails = matrixCcEmail ? `${matrixCcEmail}, ${submitterEmail}` : submitterEmail;
+                fullPayload.approver_email = approverEmail;
+                fullPayload.cc_emails = matrixCcEmail ? (matrixCcEmail + ', ' + submitterEmail) : submitterEmail;
 
-                /* 
-                 * Robust Payload Insertion Strategy:
-                 * Tries inserting with 'approval_criteria'. If the column doesn't exist in Supabase schema,
-                 * falls back seamlessly to 'criteria' or 'approval_type'.
-                */
-                let lastError = null;
-                let isSuccess = false;
+                // Smart Insert with Column Fallbacks
+                async function insertPayload(data) {
+                    // Try with 'approval_criteria'
+                    var attempt1 = await dbClient.from('approval_requests').insert([{ ...data, approval_criteria: criteriaVal }]);
+                    if (!attempt1.error) return attempt1;
 
-                const columnCandidates = ['approval_criteria', 'criteria', 'approval_type'];
+                    // Fallback to 'criteria'
+                    var attempt2 = await dbClient.from('approval_requests').insert([{ ...data, criteria: criteriaVal }]);
+                    if (!attempt2.error) return attempt2;
 
-                for (let colName of columnCandidates) {
-                    const testPayload = { ...baseData, [colName]: criteriaVal };
-                    
-                    const ins = await dbClient
-                        .from('approval_requests')
-                        .insert([testPayload]);
-
-                    if (!ins.error) {
-                        isSuccess = true;
-                        break;
-                    } else {
-                        lastError = ins.error;
-                        // If error is not schema-related, break loop
-                        if (!ins.error.message.includes('Could not find the') && !ins.error.message.includes('schema cache')) {
-                            break;
-                        }
-                    }
+                    // Fallback to minimal core fields if extra optional columns are missing
+                    var minData = {
+                        submitter_email: submitterEmail,
+                        customer_id: data.customer_id || 'N/A',
+                        sales_poc_name: data.sales_poc_name || '',
+                        credit_limit_required: data.credit_limit_required || 0,
+                        approver_email: approverEmail,
+                        status: 'Pending',
+                        approval_criteria: criteriaVal
+                    };
+                    return await dbClient.from('approval_requests').insert([minData]);
                 }
 
-                if (!isSuccess && lastError) {
-                    throw lastError;
-                }
+                var ins = await insertPayload(fullPayload);
 
-                // Display success
+                if (ins.error) throw ins.error;
+
                 statusMsg.className = 'status-msg success';
-                statusMsg.innerHTML = '✅ Request submitted successfully!<br><span style="font-size:12px; font-weight:normal; color:#2f855a;">Assigned Approver: ' + approverEmail + '</span>';
+                statusMsg.innerText = '✅ Request submitted successfully!';
                 statusMsg.style.display = 'block';
-                
                 document.getElementById('creditForm').reset();
-                updateActiveSection();
+                updateSections();
 
             } catch (err) {
-                console.error("Submission Error:", err);
                 statusMsg.className = 'status-msg error';
-                statusMsg.innerHTML = '❌ Error submitting request: ' + err.message + '<br><small style="font-weight:normal">Please ensure your Supabase table has a matching text column (e.g. approval_criteria or criteria).</small>';
+                statusMsg.innerText = '❌ Error submitting request: ' + err.message;
                 statusMsg.style.display = 'block';
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerText = 'Submit Request';
             }
-        });
-
-        // Initialize on page load
-        window.addEventListener('DOMContentLoaded', () => {
-            loadApprovalCriteriaFromSupabase();
         });
     })();
 </script>
